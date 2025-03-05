@@ -1,0 +1,24 @@
+{
+  "name": "cmps271-backend",
+  "version": "1.0.0",
+  "description": "afterthoughtbackend",
+  "main": "server.js",
+  "scripts": {
+    "test": "server.js",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HusseinAtoui/cmps271-backend.git"
+  },
+  "keywords": [
+    "philosophy",
+    "journal"
+  ],
+  "author": "Chu Barea Hussien bouthain lara",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HusseinAtoui/cmps271-backend/issues"
+  },
+  "homepage": "https://github.com/HusseinAtoui/cmps271-backend#readme"
+}
