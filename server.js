@@ -5,6 +5,7 @@ const cors = require('cors');
 // Import routes
 const articlesRoutes = require('./routes/articles');
 const eventsRoutes = require('./routes/events');
+const authRoutes = require('./routes/auth');
 
 // Create Express app
 const app = express();
@@ -22,6 +23,7 @@ mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true 
 // Use API routes
 app.use('/api/articles', articlesRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/auth', authRoutes);
 
 // Default route for testing
 app.get('/', (req, res) => {
