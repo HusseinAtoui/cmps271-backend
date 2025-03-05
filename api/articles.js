@@ -2,6 +2,17 @@ const express = require('express');
 const router = express.Router();
 const Article = require('../models/Article');
 
+// GET articles by tag
+// Note: Place this route before the "/:id" route to prevent conflicts.
+router.get('/tag/:tag', async (req, res) => {
+  try {
+    const articles = await Article.find({ tag: req.params.tag });
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET all articles
 router.get('/', async (req, res) => {
   try {
