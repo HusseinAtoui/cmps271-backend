@@ -33,12 +33,15 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// SIGNUP Route (Only firstName, lastName, email, and password required)
-router.post('/signup', async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-
-  if (!firstName || !lastName || !email || !password) {
-    return res.json({ status: "FAILED", message: "All fields are required." });
+// SIGNUP Route (Only email and password are required. firstName and lastName are optional.)
+router.post('/signup', upload.single('profilePicture'), async (req, res) => {//change this upload of image to something else later
+  const { firstName, lastName, email, password, bio } = req.body;
+  // Only email and password are required.
+  if (!email || !password|| !firstName||!lastName) {
+    return res.json({ status: "FAILED", message: "Email, password, name are required." });
+  }
+  if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+    return res.json({ status: "FAILED", message: "Invalid email entered." });
   }
   if (!/^[a-zA-Z ]*$/.test(firstName)) {
     return res.json({ status: "FAILED", message: "Invalid first name entered." });
@@ -46,11 +49,14 @@ router.post('/signup', async (req, res) => {
   if (!/^[a-zA-Z ]*$/.test(lastName)) {
     return res.json({ status: "FAILED", message: "Invalid last name entered." });
   }
-  if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
-    return res.json({ status: "FAILED", message: "Invalid email entered." });
-  }
-  if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    return res.json({ status: "FAILED", message: "Password must be at least 8 characters long and contain an uppercase letter, a number, and a special character." });
+  if (password.length < 8 || 
+      !/[A-Z]/.test(password) || 
+      !/[0-9]/.test(password) || 
+      !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return res.json({ 
+      status: "FAILED", 
+      message: "Password must be at least 8 characters long and contain an uppercase letter, a number, and a special character." 
+    });
   }
 
   try {
@@ -62,11 +68,14 @@ router.post('/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
+    // Use provided firstName and lastName if available, otherwise default to empty string.
     const newUser = new User({
-      firstName,
-      lastName,
+      firstName: req.body.firstName ,
+      lastName: req.body.lastName ,
       email,
       password: hashedPassword,
+      bio: bio || "I am an aftertinker", // bio remains optional; default is set in the model
+      profilePicture: req.file ? req.file.path : 'default.png',
       verificationToken
     });
 
@@ -111,30 +120,32 @@ router.get('/verify/:token', async (req, res) => {
   }
 });
 
-// LOGIN Route (Only firstName and email required)
+// LOGIN Route (Requires email and password only)
 router.post('/login', async (req, res) => {
-  const { email, firstName } = req.body;
+  const { email, password } = req.body;
 
-  if (!email || !firstName) {
-    return res.json({ status: "FAILED", message: "Email and first name are required." });
+  if (!email || !password) {
+    return res.json({ status: "FAILED", message: "Email and password are required." });
   }
 
   try {
-    const user = await User.findOne({ email, firstName });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.json({ status: "FAILED", message: "User not found. Please sign up." });
     }
     if (!user.verified) {
       return res.json({ status: "FAILED", message: "Email not verified. Please check your inbox." });
     }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.json({ status: "FAILED", message: "Incorrect password." });
+    }
     if (user.deactivated) {
       user.deactivated = false;
       await user.save();
     }
-
     const payload = { userId: user._id, email: user.email };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
-
     res.json({ status: "SUCCESS", message: "Login successful", token, data: user });
   } catch (err) {
     res.json({ status: "FAILED", message: "An error occurred while logging in." });
@@ -142,9 +153,9 @@ router.post('/login', async (req, res) => {
 });
 
 // Profile Update Route (for updating additional info later)
-router.put('/update-profile', upload.single('profilePicture'), async (req, res) => {
+router.put('/update-profile', upload.single('profilePicture'), async (req, res) => {  //change this upload of image to something else later
   const { email, bio } = req.body;
-  const profilePicture = req.file ? req.file.path : null;
+  const profilePicture = req.file ? req.file.path : undefined;
 
   try {
     const user = await User.findOne({ email });
