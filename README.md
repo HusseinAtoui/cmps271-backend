@@ -7,4 +7,4 @@ List of things to do and change:
 4. Have submissions frontend (does it need a level of approving by a team member? a diff page to aprove articles?)
 5. Manage storing pfp and images not on local machine but on a seperate database? (aw3 option, google cloud storage? or check other stuff)
 6. How to deploy with backend?
-7. mongodb+srv://bouthainahhk:GS88O06F8QA1XJiO@afterthoughts.htdhg.mongodb.net/
+   
