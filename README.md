@@ -5,5 +5,5 @@ List of things to do and change:
 2. Test user auth and login
 3. Test events and articles api
 4. Have submissions frontend (does it need a level of approving by a team member? a diff page to aprove articles?)
-5. Manage storing pfp and images not on local machine but on a seperate database? (aw3 option or check other stuff)
+5. Manage storing pfp and images not on local machine but on a seperate database? (aw3 option, google cloud storage? or check other stuff)
 6. How to deploy with backend?
