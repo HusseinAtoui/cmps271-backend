@@ -66,10 +66,13 @@ const uploadToImgur = async (imageBuffer) => {
   }
 };
 
-router.post('/', (req, res, next) => {
-  console.log("🔑 Received Token in Backend:", req.headers.authorization);
-  next(); // Continue to authentication
-}, verifyToken, upload.single('image'), async (req, res) => {
+// **POST: Create New Event**
+router.post('/', upload.single('image'), async (req, res) => {
+  try {
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = await uploadToImgur(req.file.buffer); // Upload image and get URL
+    }
 
 try{
       const newEvent = new Event({
