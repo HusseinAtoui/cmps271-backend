@@ -6,7 +6,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const path = require('path');
-const User = require('../models/user'); // Import User model explicitly
+
+const User = require('../models/user');
 
 require('dotenv').config();
 
