@@ -103,5 +103,21 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
     return res.status(500).json({ status: "FAILED", message: error.message });
   }
 });
+router.get('/verify/:token', async (req, res) => {
+  try {
+    const user = await User.findOne({ verificationToken: req.params.token });
+    if (!user) {
+      return res.status(400).send("Invalid or expired verification link.");
+    }
+
+    user.verified = true;
+    user.verificationToken = null;
+    await user.save();
+
+    res.redirect('http://localhost:5500/loginPage.html?verified=true'); // Redirect to login after success
+  } catch (error) {
+    res.status(500).send('Error verifying email.');
+  }
+});
 
 module.exports = router;
