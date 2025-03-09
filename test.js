@@ -1,9 +1,9 @@
 const axios = require('axios');
 const fs = require('fs');
 const FormData = require('form-data');
-//hello
+
 // Replace with your Imgur client ID
-const clientId = 'b0a9f05aa05f45b';
+
 
 // Path to the image you want to upload
 const imagePath = 'download.jpeg';
@@ -25,3 +25,21 @@ axios.post('https://api.imgur.com/3/upload', form, {
   .catch(error => {
     console.error('Error uploading image:', error.message);
   });
+
+
+  //example fetch
+  try {
+    const endpoint = filterType === "friends" ? "feed" : "explore";
+    const response = await fetch(`http://localhost:3000/post/${endpoint}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+    });
+    const result = await response.json();
+    return result.data;
+} catch (error) {
+    console.error('Error fetching posts:', error);
+    return [];
+}
+
