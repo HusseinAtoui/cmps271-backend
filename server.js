@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+
 
 // Import routes
 const articlesRoutes = require('./api/articles');
@@ -15,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to MongoDB (update connection string as needed)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/afterthoughts';
+const MONGODB_URI = process.env.MONGODB_URI ;
 mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
