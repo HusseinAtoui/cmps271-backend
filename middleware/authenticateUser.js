@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 function verifyToken(req, res, next) {
-    const token = req.header('Authorization')?.split(' ')[1]; // Extract token from 'Authorization' header
+    const token = req.header('Authorization')?.split(' ')[1]; // Extract token from header
 
     if (!token) {
         return res.status(403).json({ message: "No token provided" });
@@ -11,8 +11,8 @@ function verifyToken(req, res, next) {
         if (err) {
             return res.status(403).json({ message: "Invalid or expired token" });
         }
-        req.user = decoded;  // Store the decoded user information in the request object
-        next();  // Proceed to the next middleware or route handler
+        req.user = decoded;  // Attach decoded payload to req.user
+        next();
     });
 }
 
@@ -25,7 +25,4 @@ const verifyRole = (roles) => {
     };
 };
 
-module.exports = {
-    verifyToken,
-    verifyRole
-};
+module.exports = { verifyToken, verifyRole };

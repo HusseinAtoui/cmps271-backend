@@ -5,7 +5,9 @@ const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
 require('dotenv').config(); // Import environment variables
-const authenticateUser = require('../middleware/authenticateUser'); // Import the authentication middleware
+
+// Import the authentication middleware's verifyToken function from authenticate.js
+const { verifyToken } = require('../middleware/authenticateUser');
 
 // Set up multer to store image in memory (no local storage)
 const storage = multer.memoryStorage();
@@ -34,7 +36,6 @@ const uploadToImgur = async (imageBuffer) => {
         Authorization: `Client-ID ${clientId}`,
       },
     });
-
     return response.data.data.link; // Return the URL of the uploaded image
   } catch (err) {
     throw new Error('Failed to upload image to Imgur');
@@ -42,7 +43,7 @@ const uploadToImgur = async (imageBuffer) => {
 };
 
 // POST a new article with image upload
-router.post('/', authenticateUser, upload, async (req, res) => {
+router.post('/', verifyToken, upload, async (req, res) => {
   try {
     let imageUrl = null;
     if (req.file) {
@@ -51,8 +52,8 @@ router.post('/', authenticateUser, upload, async (req, res) => {
 
     const newArticle = new Article({
       ...req.body,
-      imageUrl, // Store the URL of the uploaded image
-      user: req.user.id, // Attach the user who created the article
+      imageUrl,         // Store the URL of the uploaded image
+      user: req.user.id // Attach the user who created the article
     });
 
     const savedArticle = await newArticle.save();
@@ -63,7 +64,7 @@ router.post('/', authenticateUser, upload, async (req, res) => {
 });
 
 // PUT update an existing article with image upload
-router.put('/:id', authenticateUser, upload, async (req, res) => {
+router.put('/:id', verifyToken, upload, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) {
@@ -77,7 +78,7 @@ router.put('/:id', authenticateUser, upload, async (req, res) => {
 
     let imageUrl = article.imageUrl; // Keep existing image URL if no new image uploaded
     if (req.file) {
-      imageUrl = await uploadToImgur(req.file.buffer); // Upload image and get the URL
+      imageUrl = await uploadToImgur(req.file.buffer); // Upload new image and get the URL
     }
 
     const updatedArticle = await Article.findByIdAndUpdate(
@@ -127,7 +128,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // DELETE an article
-router.delete('/:id', authenticateUser, async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
