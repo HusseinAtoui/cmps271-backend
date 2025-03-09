@@ -6,25 +6,24 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const path = require('path');
-
+const mongoose = require('mongoose');
 const User = require('../models/user');
-
 require('dotenv').config();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Multer configuration for profile picture upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, './uploads');  
+    cb(null, './uploads');
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));  
+    cb(null, Date.now() + path.extname(file.originalname));
   }
 });
-const upload = multer({ 
+const upload = multer({
   storage: storage,
-  limits: { fileSize: 1024 * 1024 * 5 }  
+  limits: { fileSize: 1024 * 1024 * 5 }
 });
 
 // Nodemailer transporter (email verification)
@@ -43,7 +42,7 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
     return res.status(400).json({ status: "FAILED", message: "Email, password, first name, and last name are required." });
   }
 
-  if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
+  if (!/^[\w-.]+@[\w-]+\.[\w-.]{2,4}$/.test(email)) {
     return res.status(400).json({ status: "FAILED", message: "Invalid email entered." });
   }
 
@@ -89,8 +88,8 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
 
     transporter.sendMail(mailOptions, (err, info) => {
       if (err) {
-        console.error("Email send error:", err);
-        return res.status(500).json({ status: "FAILED", message: "Error sending verification email." });
+        console.error("Error sending email:", err);
+        return res.status(500).json({ status: "FAILED", message: err.message });
       }
       return res.status(201).json({
         status: "SUCCESS",
