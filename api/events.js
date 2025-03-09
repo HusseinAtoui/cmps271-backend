@@ -44,7 +44,7 @@ const uploadToImgur = async (imageBuffer) => {
 };
 
 // **POST: Create New Event**
-router.post('/', verifyToken, upload.single('image'), async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     let imageUrl = null;
     if (req.file) {
