@@ -120,4 +120,57 @@ router.get('/verify/:token', async (req, res) => {
   }
 });
 
+// User Login Route with JWT Authentication
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+      return res.status(400).json({ status: "FAILED", message: "Email and password are required." });
+  }
+
+  try {
+      // Check if user exists
+      const user = await User.findOne({ email });
+      if (!user) {
+          return res.status(404).json({ status: "FAILED", message: "User not found. Please sign up." });
+      }
+
+      // Check if email is verified
+      if (!user.verified) {
+          return res.status(403).json({ status: "FAILED", message: "Please verify your email before logging in." });
+      }
+
+      // Compare password with stored hash
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+          return res.status(401).json({ status: "FAILED", message: "Incorrect password." });
+      }
+
+      // Generate JWT token for user authentication
+      const token = jwt.sign(
+          { id: user._id, email: user.email },
+          JWT_SECRET,
+          { expiresIn: '1h' } // Token expires in 1 hour
+      );
+
+      res.status(200).json({
+          status: "SUCCESS",
+          message: "Login successful!",
+          token,
+          user: {
+              id: user._id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              bio: user.bio,
+              profilePicture: user.profilePicture
+          }
+      });
+
+  } catch (error) {
+      console.error("Login error details:", error);
+      res.status(500).json({ status: "FAILED", message: "An error occurred during login. Please try again later." });
+  }
+});
+
 module.exports = router;
