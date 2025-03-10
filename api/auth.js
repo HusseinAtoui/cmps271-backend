@@ -12,20 +12,23 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Multer configuration for profile picture upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, './uploads');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 1024 * 1024 * 5 }
-});
 
+
+const uploadToImgur = async (imageBuffer) => {
+  const formData = new FormData();
+  formData.append('image', imageBuffer.toString('base64'));
+
+  try {
+    const response = await axios.post('https://api.imgur.com/3/upload', formData, {
+      headers: {
+        Authorization: `Client-ID ${IMGUR_CLIENT_ID}`,
+      },
+    });
+    return response.data.data.link; // Return Imgur URL
+  } catch (err) {
+    throw new Error('Failed to upload image to Imgur');
+  }
+};
 // Nodemailer transporter (email verification)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -35,9 +38,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-router.post('/signup', upload.single('profilePicture'), async (req, res) => {
+router.post('/signup',  async (req, res) => {
   const { firstName, lastName, email, password, bio } = req.body;
-
+  console.log("Request Body:", req.body);
   if (!email || !password || !firstName || !lastName) {
     return res.status(400).json({ status: "FAILED", message: "Email, password, first name, and last name are required." });
   }
@@ -64,14 +67,16 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString('hex');
-
+    let profilePictureUrl = "https://i.imgur.com/default.png"; // Default profile pic
+    if (req.file) {
+      profilePictureUrl = await uploadToImgur(req.file.buffer);}
     const newUser = new User({
       firstName,
       lastName,
       email,
       password: hashedPassword,
       bio: bio || "I am an aftertinker",
-      profilePicture: req.file ? req.file.path : 'default.png',
+      profilePicture: profilePictureUrl,
       verificationToken,
       verified: false
     });
