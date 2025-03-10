@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
 });
 
 // ✅ GET a single event by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id',async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {
@@ -67,7 +67,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ✅ POST: Create a new event (Only Authenticated Users)
-router.post('/', verifyToken, async (req, res) => {
+router.post('/',  async (req, res) => {
   console.log("📩 Received event data:", req.body);
 
   try {
@@ -96,7 +96,7 @@ router.post('/', verifyToken, async (req, res) => {
 
 
 // ✅ PUT: Update an event (Only the creator can update)
-router.put('/:id', verifyToken, upload, async (req, res) => {
+router.put('/:id',  upload, async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {
@@ -131,7 +131,7 @@ router.put('/:id', verifyToken, upload, async (req, res) => {
 });
 
 // ✅ DELETE: Delete an event (Only the creator can delete)
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     
