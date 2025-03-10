@@ -67,29 +67,33 @@ router.get('/:id', async (req, res) => {
 });
 
 // ✅ POST: Create a new event (Only Authenticated Users)
-router.post('/', verifyToken, upload, async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
+  console.log("📩 Received event data:", req.body);
+
   try {
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = await uploadToImgur(req.file.buffer);
+    // Ensure the event always has a createdBy field
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: "Unauthorized: No user ID found" });
     }
 
     const newEvent = new Event({
       title: req.body.title,
       description: req.body.description,
       date: req.body.date,
-      image: imageUrl || "default.jpg", // If no image is uploaded, use a default one
+      image: req.body.image || "default.jpg",
       details: req.body.details,
-      createdBy: req.user.id // Associate event with the logged-in user
+      createdBy: req.user.id // ✅ Ensure createdBy is always set
     });
 
     const savedEvent = await newEvent.save();
+    console.log("✅ Event Created:", savedEvent);
     res.status(201).json(savedEvent);
   } catch (err) {
-    console.error("❌ Error creating event:", err);
+    console.error("❌ Error Saving Event:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ✅ PUT: Update an event (Only the creator can update)
 router.put('/:id', verifyToken, upload, async (req, res) => {
@@ -128,39 +132,30 @@ router.put('/:id', verifyToken, upload, async (req, res) => {
 
 // ✅ DELETE: Delete an event (Only the creator can delete)
 router.delete('/:id', verifyToken, async (req, res) => {
-  console.log("🗑️ DELETE Request Received for Event ID:", req.params.id);
-  console.log("🔑 Authenticated User ID:", req.user ? req.user.id : "No User Found");
-
   try {
     const event = await Event.findById(req.params.id);
-
+    
     if (!event) {
-      console.error("❌ Event Not Found:", req.params.id);
-      return res.status(404).json({ error: "Event not found" });
+      return res.status(404).json({ error: "❌ Event not found" });
     }
 
-    // ✅ Ensure `createdBy` exists before calling `.toString()`
+    console.log("🗑️ DELETE Request for Event:", event);
+
     if (!event.createdBy) {
-      console.error("❌ Event missing 'createdBy' field:", req.params.id);
-      return res.status(500).json({ error: "Event is missing required data (createdBy)" });
+      return res.status(400).json({ error: "❌ Event is missing 'createdBy' field. Fix required!" });
     }
 
-    console.log("👤 Event Created By:", event.createdBy.toString());
-
-    // Check if the logged-in user is the event owner
     if (event.createdBy.toString() !== req.user.id) {
-      console.error("❌ Unauthorized Delete Attempt by User:", req.user.id);
-      return res.status(403).json({ error: "Not authorized to delete this event" });
+      return res.status(403).json({ error: '❌ Not authorized to delete this event' });
     }
 
     await Event.findByIdAndDelete(req.params.id);
-    console.log("✅ Event Deleted Successfully:", req.params.id);
-    res.json({ message: "Event deleted successfully" });
+    res.json({ message: "✅ Event deleted successfully" });
   } catch (err) {
-    console.error("❌ Error Deleting Event:", err.message);
-    res.status(500).json({ error: err.message || "An error occurred while deleting the event" });
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 
 module.exports = router;
