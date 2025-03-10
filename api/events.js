@@ -128,21 +128,39 @@ router.put('/:id', verifyToken, upload, async (req, res) => {
 
 // ✅ DELETE: Delete an event (Only the creator can delete)
 router.delete('/:id', verifyToken, async (req, res) => {
+  console.log("🗑️ DELETE Request Received for Event ID:", req.params.id);
+  console.log("🔑 Authenticated User ID:", req.user ? req.user.id : "No User Found");
+
   try {
     const event = await Event.findById(req.params.id);
+
     if (!event) {
+      console.error("❌ Event Not Found:", req.params.id);
       return res.status(404).json({ error: "Event not found" });
     }
 
+    // ✅ Ensure `createdBy` exists before calling `.toString()`
+    if (!event.createdBy) {
+      console.error("❌ Event missing 'createdBy' field:", req.params.id);
+      return res.status(500).json({ error: "Event is missing required data (createdBy)" });
+    }
+
+    console.log("👤 Event Created By:", event.createdBy.toString());
+
+    // Check if the logged-in user is the event owner
     if (event.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorized to delete this event' });
+      console.error("❌ Unauthorized Delete Attempt by User:", req.user.id);
+      return res.status(403).json({ error: "Not authorized to delete this event" });
     }
 
     await Event.findByIdAndDelete(req.params.id);
+    console.log("✅ Event Deleted Successfully:", req.params.id);
     res.json({ message: "Event deleted successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("❌ Error Deleting Event:", err.message);
+    res.status(500).json({ error: err.message || "An error occurred while deleting the event" });
   }
 });
+
 
 module.exports = router;
