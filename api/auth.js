@@ -4,29 +4,37 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const axios = require('axios');
+const FormData = require('form-data'); // ✅ Fixed missing import
 const multer = require('multer');
-const path = require('path');
 const mongoose = require('mongoose');
 const User = require('../models/user');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-
+// Multer configuration for profile picture upload
+const upload = multer({ storage: multer.memoryStorage() });
 
 const uploadToImgur = async (imageBuffer) => {
+  if (!imageBuffer) {
+    throw new Error("Image buffer is empty, cannot upload.");
+  }
+
   const formData = new FormData();
-  formData.append('image', imageBuffer.toString('base64'));
+  formData.append("image", imageBuffer.toString("base64"));
 
   try {
-    const response = await axios.post('https://api.imgur.com/3/upload', formData, {
+    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
       headers: {
-        Authorization: `Client-ID ${IMGUR_CLIENT_ID}`,
+        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+        ...formData.getHeaders(),
       },
     });
-    return response.data.data.link; // Return Imgur URL
+    return response.data.data.link; // ✅ Return Imgur URL
   } catch (err) {
-    throw new Error('Failed to upload image to Imgur');
+    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
+    throw new Error("Failed to upload image to Imgur.");
   }
 };
 // Nodemailer transporter (email verification)
@@ -38,9 +46,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-router.post('/signup',  async (req, res) => {
+router.post('/signup', upload.single('profilePicture'), async (req, res) => {
   const { firstName, lastName, email, password, bio } = req.body;
-  console.log("Request Body:", req.body);
+
   if (!email || !password || !firstName || !lastName) {
     return res.status(400).json({ status: "FAILED", message: "Email, password, first name, and last name are required." });
   }
@@ -69,7 +77,8 @@ router.post('/signup',  async (req, res) => {
     const verificationToken = crypto.randomBytes(32).toString('hex');
     let profilePictureUrl = "https://i.imgur.com/default.png"; // Default profile pic
     if (req.file) {
-      profilePictureUrl = await uploadToImgur(req.file.buffer);}
+      profilePictureUrl = await uploadToImgur(req.file.buffer);
+    }
     const newUser = new User({
       firstName,
       lastName,
