@@ -8,43 +8,32 @@ const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
 
 // ✅ Multer setup for memory storage (storing images in memory before upload)
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('File must be an image'), false);
-    }
-    cb(null, true);
-  }
-}).single('image');
+const upload = multer({ storage: multer.memoryStorage() });
 
-// ✅ Function to upload image to Imgur
 const uploadToImgur = async (imageBuffer) => {
-  const clientId = process.env.IMGUR_CLIENT_ID;
-  if (!clientId) {
-    throw new Error('Imgur Client ID is missing in environment variables.');
+  if (!imageBuffer) {
+    throw new Error("Image buffer is empty, cannot upload.");
   }
 
   const formData = new FormData();
-  formData.append('image', imageBuffer.toString('base64'));
+  formData.append("image", imageBuffer.toString("base64"));
 
   try {
-    const response = await axios.post('https://api.imgur.com/3/upload', formData, {
+    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
       headers: {
-        Authorization: `Client-ID ${clientId}`,
+        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
+        ...formData.getHeaders(),
       },
     });
-
-    return response.data.data.link; // ✅ Return uploaded image URL
+    return response.data.data.link; // ✅ Return Imgur URL
   } catch (err) {
-    throw new Error('Failed to upload image to Imgur');
+    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
+    throw new Error("Failed to upload image to Imgur.");
   }
 };
 
-// ✅ GET all events
-router.get('/', verifyToken, async (req, res) => {
+// ✅ GET all events (No authentication required)
+router.get('/', async (req, res) => {
   try {
     const events = await Event.find();
     res.json(events);
@@ -53,8 +42,8 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
-// ✅ GET a single event by ID
-router.get('/:id', verifyToken,async (req, res) => {
+// ✅ GET a single event by ID (No authentication required)
+router.get('/:id', async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {
@@ -66,23 +55,20 @@ router.get('/:id', verifyToken,async (req, res) => {
   }
 });
 
-// ✅ POST: Create a new event (Only Authenticated Users)
-router.post('/', verifyToken, async (req, res) => {
+// ✅ POST: Create a new event (No authentication required)
+router.post('/', upload.single('image'),async (req, res) => {
   console.log("📩 Received event data:", req.body);
-
+  let profilePictureUrl = "https://i.imgur.com/default.png"; // Default profile pic
+  if (req.file) {
+    profilePictureUrl = await uploadToImgur(req.file.buffer);
+  }
   try {
-    // Ensure the event always has a createdBy field
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: "Unauthorized: No user ID found" });
-    }
-
     const newEvent = new Event({
       title: req.body.title,
       description: req.body.description,
       date: req.body.date,
-      image: req.body.image || "default.jpg",
-      details: req.body.details,
-      createdBy: req.user.id // ✅ Ensure createdBy is always set
+      image: profilePictureUrl,
+      details: req.body.details
     });
 
     const savedEvent = await newEvent.save();
@@ -94,17 +80,12 @@ router.post('/', verifyToken, async (req, res) => {
   }
 });
 
-
-// ✅ PUT: Update an event (Only the creator can update)
-router.put('/:id', verifyToken, upload, async (req, res) => {
+// ✅ PUT: Update an event (No authentication required)
+router.put('/:id', upload.single('image'), async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
-    }
-
-    if (event.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'You are not authorized to update this event' });
     }
 
     let imageUrl = event.image;
@@ -130,8 +111,8 @@ router.put('/:id', verifyToken, upload, async (req, res) => {
   }
 });
 
-// ✅ DELETE: Delete an event (Only the creator can delete)
-router.delete('/:id', verifyToken, async (req, res) => {
+// ✅ DELETE: Delete an event (No authentication required)
+router.delete('/:id', async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     
@@ -141,21 +122,11 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     console.log("🗑️ DELETE Request for Event:", event);
 
-    if (!event.createdBy) {
-      return res.status(400).json({ error: "❌ Event is missing 'createdBy' field. Fix required!" });
-    }
-
-    if (event.createdBy.toString() !== req.user.id) {
-      return res.status(403).json({ error: '❌ Not authorized to delete this event' });
-    }
-
     await Event.findByIdAndDelete(req.params.id);
     res.json({ message: "✅ Event deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-
 
 module.exports = router;

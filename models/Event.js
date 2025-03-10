@@ -6,7 +6,7 @@ const eventSchema = new mongoose.Schema({
   description: { type: String },                  
   date:        { type: Date, required: true },
   details:     { type: String },                  
-  createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true } // ✅ FIXED: Added createdBy
+ 
 });
 
 module.exports = mongoose.model('Event', eventSchema);
