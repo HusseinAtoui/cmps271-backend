@@ -115,15 +115,16 @@ router.put('/update/:id', upload.single('image'), async (req, res) => {
   }
 });
 
-// ✅ Get articles by tag
 router.get('/tag/:tag', async (req, res) => {
   try {
-    const articles = await Article.find({ tag: req.params.tag });
-    res.json(articles);
+      const tag = req.params.tag;
+      const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") } });
+      res.json(articles);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message });
   }
 });
+
 
 // ✅ Delete an article by ID
 router.delete('/delete/:id', async (req, res) => {
