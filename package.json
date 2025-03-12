@@ -23,6 +23,7 @@
   "homepage": "https://github.com/HusseinAtoui/cmps271-backend#readme",
   "dependencies": {
     "axios": "^1.8.2",
+    "dotenv": "^16.4.7",
     "imgur": "^2.4.3",
     "multer": "^1.4.5-lts.1"
   }
