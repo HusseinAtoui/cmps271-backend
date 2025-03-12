@@ -1,56 +1,50 @@
 const express = require('express');
 const router = express.Router();
-const Article = require('../models/Article');
 const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
-const { verifyToken } = require('../middleware/authenticateUser');
+const Article = require('../models/Article');
+const { verifyToken } = require('../middleware/authenticateUser'); 
 require('dotenv').config();
 
-// Multer setup for image uploads (memory storage)
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('File must be an image'), false);
-    }
-    cb(null, true);
-  }
-}).single('image');
+// ✅ Multer setup for memory storage (storing images in memory before upload)
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Function to upload image buffer to Imgur
 const uploadToImgur = async (imageBuffer) => {
-  const clientId = process.env.IMGUR_CLIENT_ID;
+  if (!imageBuffer) {
+    throw new Error("Image buffer is empty, cannot upload.");
+  }
+
   const formData = new FormData();
-  formData.append('image', imageBuffer.toString('base64'));
+  formData.append("image", imageBuffer.toString("base64"));
 
   try {
-    const response = await axios.post('https://api.imgur.com/3/upload', formData, {
+    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
       headers: {
+        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
         ...formData.getHeaders(),
-        Authorization: `Client-ID ${clientId}`,
       },
     });
-    return response.data.data.link;
+    return response.data.data.link; // ✅ Return Imgur URL
   } catch (err) {
-    throw new Error('Failed to upload image to Imgur');
+    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
+    throw new Error("Failed to upload image to Imgur.");
   }
 };
 
 // POST: Create a new article
-router.post('/', verifyToken, upload, async (req, res) => {
+router.post('/',  upload.single('image'), async (req, res) => {
   try {
-    let imageUrl = null;
+    console.log("📩 Received event data:", req.body);
+    let picUrl = "https://i.imgur.com/default.png"; // Default profile pic
     if (req.file) {
-      imageUrl = await uploadToImgur(req.file.buffer);
+      picUrl = await uploadToImgur(req.file.buffer);
     }
 
     const newArticle = new Article({
       ...req.body,
-      imageUrl,
-      user: req.user.userId, // match JWT token payload
+      picUrl,
+      user:  "user", // match JWT token payload
     });
 
     const savedArticle = await newArticle.save();
@@ -61,34 +55,36 @@ router.post('/', verifyToken, upload, async (req, res) => {
 });
 
 // PUT: Update existing article
-router.put('/:id', verifyToken, upload, async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ error: 'Article not found' });
+      console.log("📩 Received Data:", req.body);
+      console.log("🖼️ Received File:", req.file); // ✅ Debugging
 
-    if (article.user.toString() !== req.user.userId) {
-      return res.status(403).json({ error: 'You can only update your own articles' });
-    }
+      let imageUrl = "https://i.imgur.com/default.png"; // Default image
+      if (req.file) {
+          imageUrl = await uploadToImgur(req.file.buffer);
+      }
 
-    let imageUrl = article.imageUrl;
-    if (req.file) {
-      imageUrl = await uploadToImgur(req.file.buffer);
-    }
+      // ✅ Ensure only unique fields are used
+      const newArticle = new Article({
+          title: req.body.title,
+          description: req.body.description, // ✅ Only one instance of `description`
+          text: req.body.text,
+          date: req.body.date,
+          image: imageUrl, 
+          author: req.body.author,
+          minToRead: req.body.minToRead,
+          tag: req.body.tag,
+      });
 
-    const updatedArticle = await Article.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...req.body,
-        imageUrl,
-      },
-      { new: true }
-    );
-
-    res.json(updatedArticle);
+      const savedArticle = await newArticle.save();
+      res.status(201).json(savedArticle);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+      console.error("❌ Error Saving Article:", err);
+      res.status(500).json({ error: err.message });
   }
 });
+
 
 // GET: Articles by tag
 router.get('/tag/:tag', async (req, res) => {
@@ -122,7 +118,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // DELETE: Delete an article
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id',  async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
