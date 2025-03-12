@@ -9,6 +9,6 @@ const articleSchema = new mongoose.Schema({
   author:      { type: String, required: true },
   minToRead:   { type: Number, required: true },   // Estimated minutes to read
   tag:         { type: String, required: true }      // Tag or attribute for the article
-}, { timestamps: true });
+});
 
 module.exports = mongoose.model('Article', articleSchema);

@@ -32,71 +32,7 @@ const uploadToImgur = async (imageBuffer) => {
   }
 };
 
-// POST: Create a new article
-router.post('/',  upload.single('image'), async (req, res) => {
-  try {
-    console.log("📩 Received event data:", req.body);
-    let picUrl = "https://i.imgur.com/default.png"; // Default profile pic
-    if (req.file) {
-      picUrl = await uploadToImgur(req.file.buffer);
-    }
-
-    const newArticle = new Article({
-      ...req.body,
-      picUrl,
-      user:  "user", // match JWT token payload
-    });
-
-    const savedArticle = await newArticle.save();
-    res.status(201).json(savedArticle);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PUT: Update existing article
-router.post('/', upload.single('image'), async (req, res) => {
-  try {
-      console.log("📩 Received Data:", req.body);
-      console.log("🖼️ Received File:", req.file); // ✅ Debugging
-
-      let imageUrl = "https://i.imgur.com/default.png"; // Default image
-      if (req.file) {
-          imageUrl = await uploadToImgur(req.file.buffer);
-      }
-
-      // ✅ Ensure only unique fields are used
-      const newArticle = new Article({
-          title: req.body.title,
-          description: req.body.description, // ✅ Only one instance of `description`
-          text: req.body.text,
-          date: req.body.date,
-          image: imageUrl, 
-          author: req.body.author,
-          minToRead: req.body.minToRead,
-          tag: req.body.tag,
-      });
-
-      const savedArticle = await newArticle.save();
-      res.status(201).json(savedArticle);
-  } catch (err) {
-      console.error("❌ Error Saving Article:", err);
-      res.status(500).json({ error: err.message });
-  }
-});
-
-
-// GET: Articles by tag
-router.get('/tag/:tag', async (req, res) => {
-  try {
-    const articles = await Article.find({ tag: req.params.tag });
-    res.json(articles);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET: Retrieve all articles
+// ✅ Get all articles
 router.get('/', async (req, res) => {
   try {
     const articles = await Article.find();
@@ -106,7 +42,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET: Retrieve article by ID
+// ✅ Get article by ID
 router.get('/:id', async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
@@ -117,15 +53,83 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// DELETE: Delete an article
-router.delete('/:id',  async (req, res) => {
+// ✅ Create a new article
+router.post('/add', upload.single('image'), async (req, res) => {
+  try {
+    console.log("📩 Received event data:", req.body);
+    let picUrl = "https://i.imgur.com/default.png"; // Default profile pic
+    if (req.file) {
+      picUrl = await uploadToImgur(req.file.buffer);
+    }
+
+    const newArticle = new Article({
+      title: req.body.title,
+      image: picUrl,
+      description: req.body.description,
+      date: req.body.date,
+      text: req.body.text,
+      author: req.body.author,
+      minToRead: req.body.minToRead,
+      tag: req.body.tag
+    });
+
+    const savedArticle = await newArticle.save();
+    res.status(201).json(savedArticle);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Update an existing article by ID
+router.put('/update/:id', upload.single('image'), async (req, res) => {
+  try {
+    console.log("📩 Received Data:", req.body);
+    console.log("🖼️ Received File:", req.file); // ✅ Debugging
+
+    let imageUrl = undefined; // Keep the existing image if no new image is provided
+    if (req.file) {
+      imageUrl = await uploadToImgur(req.file.buffer);
+    }
+
+    const updatedArticle = await Article.findByIdAndUpdate(
+      req.params.id,
+      {
+        title: req.body.title,
+        description: req.body.description,
+        text: req.body.text,
+        date: req.body.date,
+        image: imageUrl || req.body.image, // Keep old image if no new upload
+        author: req.body.author,
+        minToRead: req.body.minToRead,
+        tag: req.body.tag,
+      },
+      { new: true } // ✅ Return updated document
+    );
+
+    if (!updatedArticle) return res.status(404).json({ error: "Article not found" });
+
+    res.status(200).json(updatedArticle);
+  } catch (err) {
+    console.error("❌ Error Updating Article:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get articles by tag
+router.get('/tag/:tag', async (req, res) => {
+  try {
+    const articles = await Article.find({ tag: req.params.tag });
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Delete an article by ID
+router.delete('/delete/:id', async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
-
-    if (article.user.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'You can only delete your own articles' });
-    }
 
     await Article.findByIdAndDelete(req.params.id);
     res.json({ message: 'Article deleted successfully' });
