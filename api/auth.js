@@ -92,7 +92,7 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
 
     const result = await newUser.save();
 
-    const verificationLink = `http://localhost:3000/api/auth/verify/${verificationToken}`;
+    const verificationLink = `https://afterthoughts.onrender.com/api/auth/verify/${verificationToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
