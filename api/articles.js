@@ -4,7 +4,7 @@ const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
 const Article = require('../models/Article');
-const { verifyToken } = require('../middleware/authenticateUser'); 
+const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
 
 // ✅ Multer setup for memory storage (storing images in memory before upload)
@@ -32,10 +32,20 @@ const uploadToImgur = async (imageBuffer) => {
   }
 };
 
-// ✅ Get all articles
-router.get('/', async (req, res) => {
+// ✅ Get all approved articles (pending = true)
+router.get('/approved', async (req, res) => {
   try {
-    const articles = await Article.find();
+    const articles = await Article.find({ pending: true });
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get all non approved articles (pending = false)
+router.get('/pending', async (req, res) => {
+  try {
+    const articles = await Article.find({ pending: false });
     res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -68,9 +78,10 @@ router.post('/add', upload.single('image'), async (req, res) => {
       description: req.body.description,
       date: req.body.date,
       text: req.body.text,
-      author: req.body.author,
+      userID: req.user.id, // ✅ Get userID from the token
       minToRead: req.body.minToRead,
-      tag: req.body.tag
+      tag: req.body.tag,
+      pending: false
     });
 
     const savedArticle = await newArticle.save();
@@ -80,51 +91,53 @@ router.post('/add', upload.single('image'), async (req, res) => {
   }
 });
 
-// ✅ Update an existing article by ID
-router.put('/update/:id', upload.single('image'), async (req, res) => {
+// ✅ Approve an article (Set pending = true)
+router.put('/approve/:id', async (req, res) => {
   try {
-    console.log("📩 Received Data:", req.body);
-    console.log("🖼️ Received File:", req.file); // ✅ Debugging
-
-    let imageUrl = undefined; // Keep the existing image if no new image is provided
-    if (req.file) {
-      imageUrl = await uploadToImgur(req.file.buffer);
-    }
-
-    const updatedArticle = await Article.findByIdAndUpdate(
+    const approvedArticle = await Article.findByIdAndUpdate(
       req.params.id,
-      {
-        title: req.body.title,
-        description: req.body.description,
-        text: req.body.text,
-        date: req.body.date,
-        image: imageUrl || req.body.image, // Keep old image if no new upload
-        author: req.body.author,
-        minToRead: req.body.minToRead,
-        tag: req.body.tag,
-      },
-      { new: true } // ✅ Return updated document
-    );
+      { pending: true },
+      { new: true }
+    )
 
-    if (!updatedArticle) return res.status(404).json({ error: "Article not found" });
+    if (!approvedArticle) return res.status(404).json({ error: "Article not found" });
 
-    res.status(200).json(updatedArticle);
   } catch (err) {
-    console.error("❌ Error Updating Article:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get all approved articles by an author (pending = true) 
+router.get('/authorapproved/:id', async (req, res) => {
+  try {
+    const authorId = req.params.id;
+    const articles = await Article.find({ userID: authorId, pending: true });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get all pending articles by an author (pending = false) 
+router.get('/authorpending/:id', async (req, res) => {
+  try {
+    const authorId = req.params.id;
+    const articles = await Article.find({ userID: authorId, pending: false });
+
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 router.get('/tag/:tag', async (req, res) => {
   try {
-      const tag = req.params.tag;
-      const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") } });
-      res.json(articles);
+    const tag = req.params.tag;
+    const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") } });
+    res.json(articles);
   } catch (err) {
-      res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
-
 
 // ✅ Delete an article by ID
 router.delete('/delete/:id', async (req, res) => {
