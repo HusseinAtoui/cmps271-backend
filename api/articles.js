@@ -9,29 +9,27 @@ require('dotenv').config();
 
 // ✅ Multer setup for memory storage (storing images in memory before upload)
 const upload = multer({ storage: multer.memoryStorage() });
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
 
-const uploadToImgur = async (imageBuffer) => {
-  if (!imageBuffer) {
-    throw new Error("Image buffer is empty, cannot upload.");
-  }
 
-  const formData = new FormData();
-  formData.append("image", imageBuffer.toString("base64"));
 
+// ✅ Upload image to ImageKit
+const uploadToImageKit = async (fileBuffer, fileName) => {
   try {
-    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
-      headers: {
-        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-        ...formData.getHeaders(),
-      },
+    const response = await imagekit.upload({
+      file: fileBuffer,
+      fileName: fileName || "event_image.jpg",
     });
-    return response.data.data.link; // ✅ Return Imgur URL
+    return response.url; // ✅ Return ImageKit URL
   } catch (err) {
-    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
-    throw new Error("Failed to upload image to Imgur.");
+    console.error("❌ ImageKit Upload Error:", err.message);
+    throw new Error("Failed to upload image.");
   }
 };
-
 // ✅ Get all approved articles (pending = true)
 router.get('/approved', async (req, res) => {
   try {
@@ -67,14 +65,14 @@ router.get('/:id', async (req, res) => {
 router.post('/add', upload.single('image'), async (req, res) => {
   try {
     console.log("📩 Received event data:", req.body);
-    let picUrl = "https://i.imgur.com/default.png"; // Default profile pic
+  
+    let imageUrl = "https://ik.imagekit.io/default.png"; // Default ImageKit placeholder
     if (req.file) {
-      picUrl = await uploadToImgur(req.file.buffer);
+      imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
     }
-
     const newArticle = new Article({
       title: req.body.title,
-      image: picUrl,
+      image: imageUrl,
       description: req.body.description,
       date: req.body.date,
       text: req.body.text,
