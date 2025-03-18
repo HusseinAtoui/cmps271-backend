@@ -123,7 +123,7 @@ router.get('/verify/:token', async (req, res) => {
     user.verificationToken = null;
     await user.save();
 
-    res.redirect('http://localhost:5500/loginPage.html?verified=true'); // Redirect to login after success
+    res.redirect('https://afterthoughts.onrender.com/loginPage.html?verified=true'); // Redirect to login after success
   } catch (error) {
     res.status(500).send('Error verifying email.');
   }
