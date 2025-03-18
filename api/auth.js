@@ -12,7 +12,11 @@ const User = require('../models/user');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
-
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
 // Multer configuration for profile picture upload
 const upload = multer({ storage: multer.memoryStorage() });
 const uploadToImageKit = async (fileBuffer, fileName) => {
