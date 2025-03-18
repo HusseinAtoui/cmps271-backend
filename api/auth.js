@@ -15,26 +15,16 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 // Multer configuration for profile picture upload
 const upload = multer({ storage: multer.memoryStorage() });
-
-const uploadToImgur = async (imageBuffer) => {
-  if (!imageBuffer) {
-    throw new Error("Image buffer is empty, cannot upload.");
-  }
-
-  const formData = new FormData();
-  formData.append("image", imageBuffer.toString("base64"));
-
+const uploadToImageKit = async (fileBuffer, fileName) => {
   try {
-    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
-      headers: {
-        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-        ...formData.getHeaders(),
-      },
+    const response = await imagekit.upload({
+      file: fileBuffer,
+      fileName: fileName || "event_image.jpg",
     });
-    return response.data.data.link; // ✅ Return Imgur URL
+    return response.url; // ✅ Return ImageKit URL
   } catch (err) {
-    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
-    throw new Error("Failed to upload image to Imgur.");
+    console.error("❌ ImageKit Upload Error:", err.message);
+    throw new Error("Failed to upload image.");
   }
 };
 // Nodemailer transporter (email verification)
@@ -75,17 +65,18 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    let profilePictureUrl = "https://i.imgur.com/default.png"; // Default profile pic
-    if (req.file) {
-      profilePictureUrl = await uploadToImgur(req.file.buffer);
-    }
+    
+  let imageUrl = "https://ik.imagekit.io/default.png"; // Default ImageKit placeholder
+  if (req.file) {
+    imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
+  }
     const newUser = new User({
       firstName,
       lastName,
       email,
       password: hashedPassword,
       bio: bio || "I am an aftertinker",
-      profilePicture: profilePictureUrl,
+      profilePicture: imageUrl,
       verificationToken,
       verified: false
     });
