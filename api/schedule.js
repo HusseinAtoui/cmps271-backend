@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
         }
 
         const newMeeting = new Meeting({
-            userId: email,  // Storing email instead of ObjectId
+            user: req.user, 
             scheduledAt: meetingDate,
             name: name,
             message: message,

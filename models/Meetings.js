@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 
 const meetingSchema = new mongoose.Schema({
-  userId: { type: String, required: true }, 
+  user: { 
+    type: Object,  
+    required: true 
+  },
   name: { type: String, required: true },
   scheduledAt: { type: Date, required: true },
   status: { type: String, enum: ['scheduled', 'confirmed', 'completed', 'cancelled'], default: 'scheduled' },
