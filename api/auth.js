@@ -182,5 +182,132 @@ router.post('/login', async (req, res) => {
       res.status(500).json({ status: "FAILED", message: "An error occurred during login. Please try again later." });
   }
 });
+// Logout Route (Client-side handles token clearing)
+router.post('/logout', (req, res) => {
+  // No action needed here, just a placeholder to notify client to clear token
+  res.status(200).json({
+    status: "SUCCESS",
+    message: "Logged out successfully. Please clear the token client-side."
+  });
+});
+
+// Change Bio Route
+router.put('/change-bio', async (req, res) => {
+  const { bio } = req.body;
+  const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ status: "FAILED", message: "Authorization required." });
+  }
+
+  try {
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    // Update bio
+    user.bio = bio;
+    await user.save();
+
+    res.status(200).json({
+      status: "SUCCESS",
+      message: "Bio updated successfully.",
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        bio: user.bio,
+        profilePicture: user.profilePicture
+      }
+    });
+
+  } catch (error) {
+    console.error("Error changing bio:", error);
+    res.status(500).json({ status: "FAILED", message: "Failed to update bio." });
+  }
+});
+
+// Change Profile Picture Route
+router.put('/change-pfp', upload.single('profilePicture'), async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ status: "FAILED", message: "Authorization required." });
+  }
+
+  try {
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    let imageUrl = user.profilePicture; // Default to current profile picture URL
+
+    if (req.file) {
+      imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
+    }
+
+    // Update profile picture
+    user.profilePicture = imageUrl;
+    await user.save();
+
+    res.status(200).json({
+      status: "SUCCESS",
+      message: "Profile picture updated successfully.",
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        bio: user.bio,
+        profilePicture: user.profilePicture
+      }
+    });
+
+  } catch (error) {
+    console.error("Error changing profile picture:", error);
+    res.status(500).json({ status: "FAILED", message: "Failed to update profile picture." });
+  }
+});
+
+// Delete Account Route
+router.delete('/delete-account', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ status: "FAILED", message: "Authorization required." });
+  }
+
+  try {
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    // Delete the user account
+    await user.remove();
+
+    res.status(200).json({
+      status: "SUCCESS",
+      message: "Account deleted successfully."
+    });
+
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ status: "FAILED", message: "Failed to delete account." });
+  }
+});
+
+module.exports = router;
+
 
 module.exports = router;
