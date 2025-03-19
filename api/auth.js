@@ -124,7 +124,7 @@ router.get('/verify/:token', async (req, res) => {
     user.verificationToken = null;
     await user.save();
 
-    res.redirect('https://https://afterthoughts.onrender.com/loginPage.html?verified=true/loginPage.html?verified=true'); // Redirect to login after success
+    res.redirect('https://husseinatoui.github.io/cmps271-frontend/loginPage.html'); // Redirect to login after success
   } catch (error) {
     res.status(500).send('Error verifying email.');
   }
