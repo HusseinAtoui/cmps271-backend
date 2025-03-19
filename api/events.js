@@ -31,7 +31,9 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
     throw new Error("Failed to upload image.");
   }
 };
-
+app.get('/hello', (req, res) => {
+  res.send('Hello World');
+});
 // GET: Fetch all events
 router.get('/', async (req, res) => {
   try {
