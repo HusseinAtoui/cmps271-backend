@@ -30,7 +30,7 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
   }
 };
 // ✅ Get all approved articles (pending = true)
-router.get('/approved', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const articles = await Article.find({ pending: true });
     res.json(articles);
@@ -39,7 +39,7 @@ router.get('/approved', async (req, res) => {
   }
 });
 // ✅ Get all non approved articles (pending = false)
-router.get('/pending', async (req, res) => {
+router.get('/pending', verifyToken, async (req, res) => {
   try {
     const articles = await Article.find({ pending: false });
     res.json(articles);
@@ -49,7 +49,7 @@ router.get('/pending', async (req, res) => {
 });
 
 // ✅ Create a new article
-router.post('/add', upload.single('image'), async (req, res) => {
+router.post('/add', verifyToken, upload.single('image'), async (req, res) => {
   try {
     console.log("📩 Received event data:", req.body);
 
@@ -90,7 +90,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 // ✅ Approve an article (Set pending = true)
-router.put('/approve/:id', async (req, res) => {
+router.put('/approve/:id', verifyToken, async (req, res) => {
   try {
     const approvedArticle = await Article.findByIdAndUpdate(
       req.params.id,
@@ -106,7 +106,7 @@ router.put('/approve/:id', async (req, res) => {
 });
 
 // ✅ Get all approved articles by an author (pending = true) 
-router.get('/authorapproved/:id', async (req, res) => {
+router.get('/authorapproved/:id', verifyToken, async (req, res) => {
   try {
     const authorId = req.params.id;
     const articles = await Article.find({ userID: authorId, pending: true });
@@ -117,7 +117,7 @@ router.get('/authorapproved/:id', async (req, res) => {
 });
 
 // ✅ Get all pending articles by an author (pending = false) 
-router.get('/authorpending/:id', async (req, res) => {
+router.get('/authorpending/:id', verifyToken, async (req, res) => {
   try {
     const authorId = req.params.id;
     const articles = await Article.find({ userID: authorId, pending: false });
@@ -128,7 +128,7 @@ router.get('/authorpending/:id', async (req, res) => {
 });
 
 // ✅ Add a Comment to the Article
-router.post('/comment-article', async (req, res) => {
+router.post('/comment-article', verifyToken, async (req, res) => {
   const { articleId, text } = req.body;
 
   if (!articleId || !text) {
@@ -156,7 +156,7 @@ router.post('/comment-article', async (req, res) => {
 });
 
 // ✅ Delete a Comment from an Article
-router.delete('/delete-comment', verifyToken, async (req, res) => {
+router.delete('/delete-comment', verifyToken, verifyToken, async (req, res) => {
   const { articleId, commentId } = req.body;
 
   if (!articleId || !commentId) {
@@ -189,7 +189,7 @@ router.delete('/delete-comment', verifyToken, async (req, res) => {
 });
 
 // ✅ Add Kudos for the article 
-router.post('/give-kudos', async (req, res) => {
+router.post('/give-kudos', verifyToken, async (req, res) => {
   const { articleId } = req.body;
 
   if (!articleId) {
@@ -235,7 +235,7 @@ router.get('/tag/:tag', async (req, res) => {
 });
 
 // ✅ Delete an article by ID
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
