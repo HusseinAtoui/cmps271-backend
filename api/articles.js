@@ -38,7 +38,7 @@ router.get('/approved', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-app.get('/hello', (req, res) => {
+app.get('/secret/hello', (req, res) => {
   res.send('Hello World');
 });
 // ✅ Get all non approved articles (pending = false)
