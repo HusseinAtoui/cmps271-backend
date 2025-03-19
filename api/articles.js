@@ -138,5 +138,20 @@ router.delete('/delete/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Endpoint to approve an article
+router.put('/approve/:id', async (req, res) => {
+  try {
+    const updatedArticle = await Article.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: true },
+      { new: true }
+    );
+    if (!updatedArticle) return res.status(404).json({ error: "Article not found" });
+    res.json(updatedArticle);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 module.exports = router;

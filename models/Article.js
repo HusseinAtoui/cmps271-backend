@@ -8,7 +8,8 @@ const articleSchema = new mongoose.Schema({
   text:        { type: String, required: true },   // Full article text
   author:      { type: String, required: true },
   minToRead:   { type: Number, required: true },   // Estimated minutes to read
-  tag:         { type: String, required: true }      // Tag or attribute for the article
+  tag:         { type: String, required: true },     // Tag or attribute for the article
+  isApproved:  {type: Boolean,default:false}
 });
 
 module.exports = mongoose.model('Article', articleSchema);
