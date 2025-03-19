@@ -50,16 +50,7 @@ router.get('/pending', async (req, res) => {
   }
 });
 
-// ✅ Get article by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ error: 'Article not found' });
-    res.json(article);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+
 
 // ✅ Create a new article
 router.post('/add', upload.single('image'), async (req, res) => {
@@ -88,7 +79,16 @@ router.post('/add', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+// ✅ Get article by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.json(article);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ✅ Approve an article (Set pending = true)
 router.put('/approve/:id', async (req, res) => {
   try {
