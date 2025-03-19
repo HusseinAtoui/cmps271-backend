@@ -28,7 +28,14 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
     throw new Error("Failed to upload image.");
   }
 };
-
+router.get('/', async (req, res) => {
+  try {
+    const events = await Event.find();
+    res.json(events);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ✅ POST: Create a new event
 router.post('/', upload.single('image'), async (req, res) => {
   console.log("📩 Received event data:", req.body);
