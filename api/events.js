@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
   }
 });
 // ✅ POST: Create a new event
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/add', upload.single('image'), async (req, res) => {
   console.log("📩 Received event data:", req.body);
   
   let imageUrl = "https://ik.imagekit.io/default.png"; // Default ImageKit placeholder
