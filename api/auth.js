@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const ImageKit = require("imagekit");
-
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
