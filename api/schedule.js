@@ -1,29 +1,27 @@
 const express = require('express');
-const Meeting = require('../models/meeting'); // Assuming the Meeting model is in models/meeting.js
+const Meeting = require('../models/meeting');
 
 const router = express.Router();
 
 // POST route to book a meeting
 router.post('/', async (req, res) => {
     try {
-        const { userId, scheduledAt } = req.body;
+        const { name, email, meetingDate, message } = req.body;
 
-        // Validate input
-        if (!userId || !scheduledAt) {
-            return res.status(400).json({ error: "User ID and scheduled time are required." });
+        if (!name || !email || !meetingDate) {
+            return res.status(400).json({ error: "Name, email, and scheduled time are required." });
         }
 
-        // Create a new meeting
         const newMeeting = new Meeting({
-            userId,
-            scheduledAt,
+            userId: email,  // Storing email instead of ObjectId
+            scheduledAt: meetingDate,
+            name: name,
+            message: message,
             status: 'scheduled'
         });
 
-        // Save the meeting to the database
         await newMeeting.save();
 
-        // Respond with success
         res.status(201).json({ message: "Meeting booked successfully!" });
     } catch (err) {
         console.error("Error booking meeting:", err);
