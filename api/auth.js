@@ -8,6 +8,7 @@ const axios = require('axios');
 const FormData = require('form-data'); // ✅ Fixed missing import
 const multer = require('multer');
 const mongoose = require('mongoose');
+const ImageKit = require('imagekit');
 const User = require('../models/user');
 require('dotenv').config();
 

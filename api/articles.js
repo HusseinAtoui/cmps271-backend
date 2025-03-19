@@ -6,6 +6,7 @@ const FormData = require('form-data');
 const Article = require('../models/Article');
 const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
+const ImageKit = require('imagekit');
 
 // ✅ Multer setup for memory storage (storing images in memory before upload)
 const upload = multer({ storage: multer.memoryStorage() });
