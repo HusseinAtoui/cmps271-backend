@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const articleSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  image: { type: String, required: true }, // URL to article image
+  title:       { type: String, required: true },
+  image:       { type: String, required: true }, // URL to article image
   description: { type: String },                   // A short description or summary
   date: { type: Date, required: true },
   text: { type: String, required: true },   // Full article text
