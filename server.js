@@ -8,7 +8,6 @@ const multer = require('multer');
 const articlesRoutes = require('./api/articles');
 const eventsRoutes = require('./api/events');
 const authRoutes = require('./api/auth');
-const userRoutes = require('./api/users');
 
 // Create Express app
 const app = express();
@@ -32,7 +31,7 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/articles', articlesRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/auth', authRoutes);
-app.use("/users", userRoutes);
+
 // ✅ Default route for testing
 app.get('/', (req, res) => {
   res.send('Afterthoughts Backend API is running');
