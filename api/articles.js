@@ -1,6 +1,4 @@
 const express = require('express');
-const ImageKit = require('imagekit');
-
 const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
