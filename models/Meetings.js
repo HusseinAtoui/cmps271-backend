@@ -1,10 +1,7 @@
 const mongoose = require('mongoose');
 
 const meetingSchema = new mongoose.Schema({
-  user: { 
-    type: Object,  
-    required: true 
-  },
+  user: { type: Object, required: false },
   name: { type: String, required: true },
   scheduledAt: { type: Date, required: true },
   status: { type: String, enum: ['scheduled', 'confirmed', 'completed', 'cancelled'], default: 'scheduled' },
