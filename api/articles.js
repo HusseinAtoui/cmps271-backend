@@ -50,31 +50,41 @@ router.get('/pending', verifyToken, async (req, res) => {
 
 // ✅ Create a new article
 router.post('/add', verifyToken, upload.single('image'), async (req, res) => {
-  try {
-    console.log("📩 Received event data:", req.body);
+  console.log("Received form data:", req.body);
+  console.log("File data:", req.file);
 
-    let imageUrl = "https://ik.imagekit.io/default.png"; // Default ImageKit placeholder
-    if (req.file) {
+  let imageUrl = "https://ik.imagekit.io/default.png"; // Default placeholder
+  if (req.file) {
+    try {
       imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
+      console.log("Uploaded image URL:", imageUrl);
+    } catch (uploadErr) {
+      console.error("Image upload failed:", uploadErr);
+      return res.status(500).json({ error: "Image upload failed" });
     }
+  }
+  try {
     const newArticle = new Article({
       title: req.body.title,
       image: imageUrl,
       description: req.body.description,
       date: req.body.date,
       text: req.body.text,
-      userID: req.user.id, // ✅ Get userID from the token
-      minToRead: req.body.minToRead,
-      tag: req.body.tag,
+      userID: req.user.id, // Ensure req.user is set by verifyToken
+      minToRead: req.body.minToRead || 1,  // default value if not provided
+      tag: req.body.tag || "general",      // default value if not provided
       pending: false
     });
 
     const savedArticle = await newArticle.save();
+    console.log("Article created:", savedArticle);
     res.status(201).json(savedArticle);
   } catch (err) {
+    console.error("Error saving article:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 // ✅ Get article by ID
 router.get('/:id', async (req, res) => {
   try {
