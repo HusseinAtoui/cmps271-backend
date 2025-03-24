@@ -70,7 +70,7 @@ router.post('/', async (req, res) => {
     // Email the invite
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: `${email}, czz01@mail.aub.edu`,
+      to: '${email}',
       subject: 'New Meeting Scheduled - Google Meet',
       text: `Hello ${name},\n\nYour meeting is scheduled.\n\nJoin here: ${meetLink}\n\nMessage: ${message || "No additional message provided."}`,
     };
