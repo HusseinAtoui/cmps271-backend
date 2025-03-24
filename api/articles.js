@@ -8,8 +8,16 @@ const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
 const ImageKit = require('imagekit');
 
-// ✅ Multer setup for memory storage (storing images in memory before upload)
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // Optional: Limit file size to 5MB
+});
+
+// ✅ Allow both `image` and `document` fields
+const uploadFields = upload.fields([
+  { name: "image", maxCount: 2 },
+  { name: "document", maxCount: 1 }
+]);
 const imagekit = new ImageKit({
   publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
   privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
@@ -47,43 +55,45 @@ router.get('/pending', verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-// ✅ Create a new article
-router.post('/add', verifyToken, upload.single('image'), async (req, res) => {
+router.post('/add', verifyToken, uploadFields, async (req, res) => {
   console.log("Received form data:", req.body);
-  console.log("File data:", req.file);
+  console.log("Files:", req.files); 
 
-  let imageUrl = "https://ik.imagekit.io/default.png"; // Default placeholder
-  if (req.file) {
+  let imageUrl = "https://ik.imagekit.io/default.png";
+
+  // ✅ Handle image upload
+  if (req.files.image) {
     try {
-      imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
+      imageUrl = await uploadToImageKit(req.files.image[0].buffer, req.files.image[0].originalname);
       console.log("Uploaded image URL:", imageUrl);
     } catch (uploadErr) {
       console.error("Image upload failed:", uploadErr);
       return res.status(500).json({ error: "Image upload failed" });
     }
   }
+
   try {
     const newArticle = new Article({
-      title: req.body.title,
+      title: req.body.title || "Untitled Article",
       image: imageUrl,
-      description: req.body.description,
-      date: req.body.date,
-      text: req.body.text,
-      userID: req.user.id, // Ensure req.user is set by verifyToken
-      minToRead: req.body.minToRead || 1,  // default value if not provided
-      tag: req.body.tag || "general",      // default value if not provided
+      description: req.body.description || "Read more about this",
+      date: req.body.date || Date.now(),
+      text: req.body.text || "",
+      userID: req.user.id,
+      minToRead: req.body.minToRead || 1,
+      tag: req.body.tag || "general",
       pending: false
     });
 
     const savedArticle = await newArticle.save();
-    console.log("Article created:", savedArticle);
+    console.log("✅ Article created:", savedArticle);
     res.status(201).json(savedArticle);
   } catch (err) {
-    console.error("Error saving article:", err);
+    console.error("❌ Error saving article:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ✅ Get article by ID
 router.get('/:id', async (req, res) => {
@@ -237,7 +247,7 @@ router.post('/give-kudos', verifyToken, async (req, res) => {
 router.get('/tag/:tag', async (req, res) => {
   try {
     const tag = req.params.tag;
-    const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") } });
+    const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") },pending: true });
     res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });
