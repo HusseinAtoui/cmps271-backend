@@ -3,13 +3,14 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
+const cohere = require('cohere-ai');
 
 // Import routes
 const articlesRoutes = require('./api/articles');
 const eventsRoutes = require('./api/events');
 const authRoutes = require('./api/auth');
 const meetingsRoutes = require('./api/schedule');
-
+const summarizeRoutes = require('./api/summarize');
 // Create Express app
 const app = express();
 
@@ -34,6 +35,12 @@ app.use('/api/events', eventsRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use('/api/schedule', meetingsRoutes); // New meetings route
+
+app.use('/api/summarize', summarizeRoutes);
+
+
+
+
 
 
 // ✅ Default route for testing
