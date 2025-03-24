@@ -10,7 +10,9 @@ const articlesRoutes = require('./api/articles');
 const eventsRoutes = require('./api/events');
 const authRoutes = require('./api/auth');
 const meetingsRoutes = require('./api/schedule');
-const summarizeRoutes = require('./api/summarize');
+const summarizeRoute = require('./api/summarize');
+
+
 // Create Express app
 const app = express();
 
@@ -34,14 +36,9 @@ app.use('/api/articles', articlesRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/auth', authRoutes);
 
-app.use('/api/schedule', meetingsRoutes); // New meetings route
-
-app.use('/api/summarize', summarizeRoutes);
-
-
-
-
-
+app.use('/api/schedule', meetingsRoutes);
+// ...
+app.use('/api/summarize', summarizeRoute); // New meetings route
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {

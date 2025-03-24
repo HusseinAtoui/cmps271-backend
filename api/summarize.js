@@ -1,46 +1,46 @@
-require('dotenv').config();
 const express = require('express');
-const cohere = require('cohere-ai');
-
-if (!process.env.COHERE_API_KEY) {
-  console.error("❌ Error: COHERE_API_KEY not found in environment variables.");
-  process.exit(1);
-}
-
-// ✅ Set Cohere API Key
-cohere.apiKey = process.env.COHERE_API_KEY;
-
+const axios = require('axios');
 const router = express.Router();
 
-// ✅ Function to generate summary
-const generateSummaryCohere = async (text) => {
-  try {
-    const response = await cohere.summarize({
-      text,
-      length: "medium",       // Options: short, medium, long
-      format: "paragraph",    // Options: bullet, paragraph
-      extractiveness: "low",  // Options: low, medium, high
-    });
-    return response.body.summary;
-  } catch (error) {
-    console.error("❌ Cohere API Error:", error);
-    throw new Error("Failed to generate summary.");
-  }
-};
+const COHERE_API_KEY = process.env.COHERE_API_KEY || 'l7mdBWEWPXLm66h517Y6P2bQPPJRWZdzLTkZPnUX';
 
-// ✅ API Route for frontend requests at the root of /api/summarize
-router.put('/', async (req, res) => {
-  const { text } = req.body;
-  if (!text) {
-    return res.status(400).json({ error: "Text is required for summarization." });
-  }
-  try {
-    const summary = await generateSummaryCohere(text);
-    res.json({ summary });
-  } catch (error) {
-    res.status(500).json({ error: "Error generating summary." });
-  }
+router.post('/', async (req, res) => {
+    console.log("Incoming request body:", req.body); // Fixed logging
+
+    const { text } = req.body; // Correct destructuring
+    if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+    }
+
+    try {
+        const response = await axios.post(
+            'https://api.cohere.ai/generate',
+            {
+                model: 'command',
+                prompt: `Summarize the following text in a short paragraph:\n\n${text}\n\nSummary:`,
+                max_tokens: 100,
+                temperature: 0.3
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${COHERE_API_KEY}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+
+        // Updated response handling
+        if (!response.data.text) {
+            console.error("Invalid response format:", response.data);
+            return res.status(500).json({ error: 'Invalid response from API' });
+        }
+
+        const summary = response.data.text.trim();
+        res.json({ summary });
+    } catch (error) {
+        console.error('Error generating summary:', error.response?.data || error);
+        res.status(500).json({ error: 'Failed to generate summary' });
+    }
 });
 
-// ✅ Export the router directly
 module.exports = router;
