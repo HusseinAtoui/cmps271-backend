@@ -275,8 +275,6 @@ router.put('/change-pfp', upload.single('profilePicture'), async (req, res) => {
     res.status(500).json({ status: "FAILED", message: "Failed to update profile picture." });
   }
 });
-
-// Delete Account Route
 router.delete('/delete-account', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
 
@@ -287,27 +285,30 @@ router.delete('/delete-account', async (req, res) => {
   try {
     // Verify JWT
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    console.log("Decoded token:", decoded); // Debug log
 
+    const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(404).json({ status: "FAILED", message: "User not found." });
     }
+    
+    // Log user details before deletion for debugging purposes
+    console.log("Deleting user:", user);
 
-    // Delete the user account
-    await user.remove();
+    // Option 1: Using document.remove()
+    // await user.remove();
+
+    // Option 2 (fallback): Using Model.deleteOne()
+    await User.deleteOne({ _id: decoded.id });
 
     res.status(200).json({
       status: "SUCCESS",
       message: "Account deleted successfully."
     });
-
   } catch (error) {
     console.error("Error deleting account:", error);
     res.status(500).json({ status: "FAILED", message: "Failed to delete account." });
   }
 });
-
-module.exports = router;
-
 
 module.exports = router;
