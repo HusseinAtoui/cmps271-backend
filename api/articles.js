@@ -70,13 +70,52 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
       console.error("Image upload failed:", uploadErr);
       return res.status(500).json({ error: "Image upload failed" });
     }
+  } let summary = "";
+  if (req.body.text) {
+    try {
+      const summaryResponse = await axios.post(
+        'https://api.cohere.ai/generate',
+        {
+          model: 'command',
+          prompt: `Summarize the following text in a short paragraph:\n\n${req.body.text}\n\nSummary:`,
+          max_tokens: 100,
+          temperature: 0.3
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Check for expected response structure from Cohere
+      if (
+        summaryResponse.data &&
+        summaryResponse.data.generations &&
+        Array.isArray(summaryResponse.data.generations) &&
+        summaryResponse.data.generations.length > 0
+      ) {
+        summary = summaryResponse.data.generations[0].text.trim();
+      } else if (summaryResponse.data.text) {
+        summary = summaryResponse.data.text.trim();
+      } else {
+        console.error("Invalid summary response format:", summaryResponse.data);
+        summary = req.body.description || "";
+      }
+    } catch (err) {
+      console.error("Error generating summary:", err.response?.data || err);
+      // Fall back to any provided description or empty string
+      summary = req.body.description || "";
+    }
   }
+
 
   try {
     const newArticle = new Article({
       title: req.body.title || "Untitled Article",
       image: imageUrl,
-      description: req.body.description || "Read more about this",
+      description: summary || "Read more about this",
       date: req.body.date || Date.now(),
       text: req.body.text || "",
       userID: req.user.id,
