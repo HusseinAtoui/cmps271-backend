@@ -40,7 +40,77 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+// google login
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID, // From your .env file
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET, // From your .env file
+  callbackURL: "http://localhost:3000/api/auth/google/callback"
+},
 
+async (accessToken, refreshToken, profile, done) => {
+  try {
+    // Check if a user with this email already exists
+    let user = await User.findOne({ email: profile.emails[0].value });
+    if (!user) {
+      // If not, create a new user using profile data from Google
+      user = new User({
+        firstName: profile.name.givenName,
+        lastName: profile.name.familyName || '',
+        email: profile.emails[0].value,
+        profilePicture: profile.photos[0].value,
+        verified: true // Google accounts are considered verified
+      });
+      await user.save();
+    }
+    return done(null, user);
+  } catch (error) {
+    return done(error, null);
+  }
+}
+));
+
+// Configure Passport serialization
+passport.serializeUser((user, done) => {
+done(null, user._id);
+});
+passport.deserializeUser(async (id, done) => {
+try {
+  const user = await User.findById(id);
+  done(null, user);
+} catch (error) {
+  done(error, null);
+}
+});
+
+// Initialize Passport middleware (if you use sessions, you might need to add express-session middleware in your main server file)
+router.use(passport.initialize());
+
+// -------------------------
+// Google Auth Routes
+// -------------------------
+
+// Route to trigger Google authentication
+router.get('/google',
+passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+// Google OAuth callback URL
+router.get('/google/callback',
+passport.authenticate('google', { failureRedirect: '/login' }),
+(req, res) => {
+  // Generate a JWT token for the authenticated user
+  const token = jwt.sign(
+    { id: req.user._id, email: req.user.email },
+    JWT_SECRET,
+    { expiresIn: '3h' }
+  );
+  // Redirect to your frontend with the token in query parameters or handle it as needed
+  res.redirect(`https://127.0.0.1:5500/profilepage?token=${token}`);
+}
+);
+// end of google login stuff
 router.post('/signup', upload.single('profilePicture'), async (req, res) => {
   const { firstName, lastName, email, password, bio } = req.body;
 
