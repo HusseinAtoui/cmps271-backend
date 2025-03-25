@@ -97,19 +97,50 @@ passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 // Google OAuth callback URL
-router.get('/google/callback',
-passport.authenticate('google', { failureRedirect: '/login' }),
-(req, res) => {
-  // Generate a JWT token for the authenticated user
-  const token = jwt.sign(
-    { id: req.user._id, email: req.user.email },
-    JWT_SECRET,
-    { expiresIn: '3h' }
-  );
-  // Redirect to your frontend with the token in query parameters or handle it as needed
-  res.redirect(`https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}`);
-}
+router.get('/google/callback', 
+    passport.authenticate('google', { failureRedirect: '/' }),
+    async (req, res) => {
+        try {
+            const { id, displayName, emails, photos } = req.user;
+            const email = emails[0].value;
+
+            // Check if user exists in database
+            let user = await User.findOne({ email });
+
+            if (!user) {
+                // Create new user (sign up)
+                user = new User({
+                    googleId: id,
+                    firstName: displayName.split(" ")[0],
+                    lastName: displayName.split(" ").slice(1).join(" "),
+                    email: email,
+                    profilePicture: photos[0].value || "",
+                    verified: true, // Since it's from Google, consider verified
+                    password:"random",
+                });
+
+                await user.save();
+                console.log("✅ New user signed up with Google:", user);
+            } else {
+                console.log("✅ Existing user logged in with Google:", user);
+            }
+
+            // Generate JWT token
+            const token = jwt.sign(
+                { id: user._id, email: user.email },
+                process.env.JWT_SECRET,
+                { expiresIn: '3h' }
+            );
+
+            // Redirect to frontend with token
+            res.redirect(`https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}`);
+        } catch (error) {
+            console.error("❌ Google OAuth Error:", error);
+            res.redirect('/loginPage.html?error=google-auth-failed');
+        }
+    }
 );
+
 // end of google login stuff
 router.post('/signup', upload.single('profilePicture'), async (req, res) => {
   const { firstName, lastName, email, password, bio } = req.body;
