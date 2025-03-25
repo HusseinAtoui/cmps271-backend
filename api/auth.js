@@ -44,8 +44,8 @@ const transporter = nodemailer.createTransport({
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID, // From your .env file
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET, // From your .env file
+  clientID: process.env.GOOGLE_CLIENT_ID1, // From your .env file
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET1, // From your .env file
   callbackURL: "http://localhost:3000/api/auth/google/callback"
 },
 
