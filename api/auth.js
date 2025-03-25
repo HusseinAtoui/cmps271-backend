@@ -107,7 +107,7 @@ passport.authenticate('google', { failureRedirect: '/login' }),
     { expiresIn: '3h' }
   );
   // Redirect to your frontend with the token in query parameters or handle it as needed
-  res.redirect(`https://127.0.0.1:5500/profilepage?token=${token}`);
+  res.redirect(`https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}`);
 }
 );
 // end of google login stuff
