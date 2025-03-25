@@ -1,84 +1,76 @@
 const express = require('express');
-const Sentiment = require('sentiment');
-const Article = require('../models/Article'); // Adjust the path as needed
-const verifyToken  = require('../middleware/authenticateUser');
-
+const axios = require('axios');
 const router = express.Router();
-const sentiment = new Sentiment();
 
-// POST route to add a comment to an article with sentiment analysis
-router.post('/comment-article', verifyToken, async (req, res) => {
-  const { articleId, text } = req.body;
+const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
+const MAX_INPUT_LENGTH = 512;
 
-  // Validate required fields
-  if (!articleId || !text) {
-    return res.status(400).json({ message: "Article ID and comment text are required" });
-  }
+router.post('/', async (req, res) => {
+    try {
+        if (!HF_API_KEY) {
+            return res.status(500).json({ error: 'Missing Hugging Face API key' });
+        }
 
-  // Analyze the sentiment of the comment text
-  const result = sentiment.analyze(text);
-  console.log("Sentiment analysis result:", result);
+        const { text } = req.body;
+        if (!text || typeof text !== 'string') {
+            return res.status(400).json({ error: 'Valid text required' });
+        }
 
-  // Define your threshold. Here, we reject comments with a negative score.
-  if (result.score < 0) {
-    return res.status(400).json({ message: "Your comment appears too negative and was not accepted." });
-  }
+        const truncatedText = text.substring(0, MAX_INPUT_LENGTH);
 
-  try {
-    // Find the article to which the comment is being added
-    const article = await Article.findById(articleId);
-    if (!article) {
-      return res.status(404).json({ message: "Article not found" });
+        // Use correct model endpoint
+        const response = await axios.post(
+            'https://api-inference.huggingface.co/models/j-hartmann/emotion-english-distilroberta-base',
+            { inputs: truncatedText },
+            {
+                headers: {
+                    'Authorization': `Bearer ${HF_API_KEY}`, // Added closing backtick
+    'Content-Type': 'application/json'
+                },
+        timeout: 20000// Increased timeout
+            }
+        );
+
+        // Improved model loading handling
+        if (response.data?.error) {
+            if (response.data.error.includes('loading')) {
+                const retryAfter = response.data.estimated_time || 15;
+                console.log(`Model loading - retrying in ${retryAfter}s`);
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                return this.huggingface(req, res);
+            }
+            throw new Error(response.data.error);
+        }
+
+        // Process new response format
+        const emotions = response.data[0];
+        const dominantEmotion = emotions.reduce((max, current) => 
+            current.score > max.score ? current : max, 
+            {score: 0}
+        );
+
+        res.json({
+            sentiment: dominantEmotion.label,
+            confidence: dominantEmotion.score,
+            analyzedText: truncatedText.substring(0, 150),
+            originalLength: text.length,
+            analyzedLength: truncatedText.length,
+            model: 'emotion-english-distilroberta-base'
+        });
+
+    } catch (error) {
+        console.error('Hugging Face error:', error.response?.data || error.message);
+        
+        const statusCode = error.response?.status || 500;
+        const errorMessage = error.response?.data?.error || 'Analysis failed';
+        
+        res.status(statusCode).json({
+            error: errorMessage,
+            ...(statusCode === 503 && { 
+                advice: 'Model is loading, please try again in 15 seconds' 
+            })
+        });
     }
-
-    // Add the comment
-    article.comments.push({
-      text,
-      postedBy: req.user.id, // Uses the authenticated user's ID
-      created: Date.now()
-    });
-
-    await article.save();
-
-    res.status(200).json({ message: "Comment added successfully", data: article });
-  } catch (err) {
-    console.error("Error adding comment:", err);
-    res.status(500).json({ message: "Error adding comment", error: err.message });
-  }
-});
-
-// DELETE route to remove a comment from an article (unchanged)
-router.delete('/delete-comment', verifyToken, async (req, res) => {
-  const { articleId, commentId } = req.body;
-
-  if (!articleId || !commentId) {
-    return res.status(400).json({ message: "Article ID and comment ID are required" });
-  }
-
-  try {
-    const article = await Article.findById(articleId);
-    if (!article) {
-      return res.status(404).json({ message: "Article not found" });
-    }
-
-    const comment = article.comments.id(commentId);
-    if (!comment) {
-      return res.status(404).json({ message: "Comment not found" });
-    }
-
-    // Ensure the requesting user is the comment's author
-    if (comment.postedBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: "You are not authorized to delete this comment" });
-    }
-
-    comment.deleteOne();
-    await article.save();
-
-    res.status(200).json({ message: "Comment deleted successfully", data: article });
-  } catch (err) {
-    console.error("Error deleting comment:", err);
-    res.status(500).json({ message: "Error deleting comment", error: err.message });
-  }
 });
 
 module.exports = router;

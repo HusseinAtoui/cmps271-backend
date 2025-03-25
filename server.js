@@ -12,7 +12,7 @@ const authRoutes = require('./api/auth');
 const meetingsRoutes = require('./api/schedule');
 const summarizeRoute = require('./api/summarize');
 const aiPlagiarismRouter = require('./api/aiplagarism');
-
+const sentimentanalysis=require('./api/sentimentComments')
 // Create Express app
 const app = express();
 
@@ -39,7 +39,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/schedule', meetingsRoutes);
 // ...
 app.use('/api/summarize', summarizeRoute); // New meetings route
-app.use('/aiplagarism', aiPlagiarismRouter);
+app.use('/api/aiplagarism', aiPlagiarismRouter);
+app.use('/api/sentimentComments',sentimentanalysis)
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {
