@@ -6,11 +6,6 @@ const router = express.Router();
 const HUGGINGFACE_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
 const MODEL_NAME = process.env.HUGGINGFACE_MODEL || 'roberta-large-openai-detector';
 
-// Debugging: Ensure credentials are loaded
-console.log("Loaded Hugging Face credentials:", { 
-    HUGGINGFACE_API_TOKEN: HUGGINGFACE_API_TOKEN ? "LOADED" : "MISSING",
-    MODEL_NAME
-});
 
 
 router.post('/detect', async (req, res) => {
