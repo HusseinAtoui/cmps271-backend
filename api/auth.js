@@ -8,33 +8,28 @@ const axios = require('axios');
 const FormData = require('form-data'); // ✅ Fixed missing import
 const multer = require('multer');
 const mongoose = require('mongoose');
+const ImageKit = require('imagekit');
 const User = require('../models/user');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
-
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
 // Multer configuration for profile picture upload
 const upload = multer({ storage: multer.memoryStorage() });
-
-const uploadToImgur = async (imageBuffer) => {
-  if (!imageBuffer) {
-    throw new Error("Image buffer is empty, cannot upload.");
-  }
-
-  const formData = new FormData();
-  formData.append("image", imageBuffer.toString("base64"));
-
+const uploadToImageKit = async (fileBuffer, fileName) => {
   try {
-    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
-      headers: {
-        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-        ...formData.getHeaders(),
-      },
+    const response = await imagekit.upload({
+      file: fileBuffer,
+      fileName: fileName || "event_image.jpg",
     });
-    return response.data.data.link; // ✅ Return Imgur URL
+    return response.url; // ✅ Return ImageKit URL
   } catch (err) {
-    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
-    throw new Error("Failed to upload image to Imgur.");
+    console.error("❌ ImageKit Upload Error:", err.message);
+    throw new Error("Failed to upload image.");
   }
 };
 // Nodemailer transporter (email verification)
@@ -75,17 +70,18 @@ router.post('/signup', upload.single('profilePicture'), async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    let profilePictureUrl = "https://i.imgur.com/default.png"; // Default profile pic
-    if (req.file) {
-      profilePictureUrl = await uploadToImgur(req.file.buffer);
-    }
+    
+  let imageUrl = "https://ik.imagekit.io/default.png"; // Default ImageKit placeholder
+  if (req.file) {
+    imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
+  }
     const newUser = new User({
       firstName,
       lastName,
       email,
       password: hashedPassword,
       bio: bio || "I am an aftertinker",
-      profilePicture: profilePictureUrl,
+      profilePicture: imageUrl,
       verificationToken,
       verified: false
     });
@@ -128,7 +124,7 @@ router.get('/verify/:token', async (req, res) => {
     user.verificationToken = null;
     await user.save();
 
-    res.redirect('http://localhost:5500/loginPage.html?verified=true'); // Redirect to login after success
+    res.redirect('https://husseinatoui.github.io/cmps271-frontend/loginPage.html'); // Redirect to login after success
   } catch (error) {
     res.status(500).send('Error verifying email.');
   }
@@ -184,6 +180,134 @@ router.post('/login', async (req, res) => {
   } catch (error) {
       console.error("Login error details:", error);
       res.status(500).json({ status: "FAILED", message: "An error occurred during login. Please try again later." });
+  }
+});
+// Logout Route (Client-side handles token clearing)
+router.post('/logout', (req, res) => {
+  // No action needed here, just a placeholder to notify client to clear token
+  res.status(200).json({
+    status: "SUCCESS",
+    message: "Logged out successfully. Please clear the token client-side."
+  });
+});
+
+// Change Bio Route
+router.put('/change-bio', async (req, res) => {
+  const { bio } = req.body;
+  const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ status: "FAILED", message: "Authorization required." });
+  }
+
+  try {
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    // Update bio
+    user.bio = bio;
+    await user.save();
+
+    res.status(200).json({
+      status: "SUCCESS",
+      message: "Bio updated successfully.",
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        bio: user.bio,
+        profilePicture: user.profilePicture
+      }
+    });
+
+  } catch (error) {
+    console.error("Error changing bio:", error);
+    res.status(500).json({ status: "FAILED", message: "Failed to update bio." });
+  }
+});
+
+// Change Profile Picture Route
+router.put('/change-pfp', upload.single('profilePicture'), async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ status: "FAILED", message: "Authorization required." });
+  }
+
+  try {
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    let imageUrl = user.profilePicture; // Default to current profile picture URL
+
+    if (req.file) {
+      imageUrl = await uploadToImageKit(req.file.buffer, req.file.originalname);
+    }
+
+    // Update profile picture
+    user.profilePicture = imageUrl;
+    await user.save();
+
+    res.status(200).json({
+      status: "SUCCESS",
+      message: "Profile picture updated successfully.",
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        bio: user.bio,
+        profilePicture: user.profilePicture
+      }
+    });
+
+  } catch (error) {
+    console.error("Error changing profile picture:", error);
+    res.status(500).json({ status: "FAILED", message: "Failed to update profile picture." });
+  }
+});
+router.delete('/delete-account', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1]; // JWT token from Authorization header
+
+  if (!token) {
+    return res.status(401).json({ status: "FAILED", message: "Authorization required." });
+  }
+
+  try {
+    // Verify JWT
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log("Decoded token:", decoded); // Debug log
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+    
+    // Log user details before deletion for debugging purposes
+    console.log("Deleting user:", user);
+
+    // Option 1: Using document.remove()
+    // await user.remove();
+
+    // Option 2 (fallback): Using Model.deleteOne()
+    await User.deleteOne({ _id: decoded.id });
+
+    res.status(200).json({
+      status: "SUCCESS",
+      message: "Account deleted successfully."
+    });
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    res.status(500).json({ status: "FAILED", message: "Failed to delete account." });
   }
 });
 

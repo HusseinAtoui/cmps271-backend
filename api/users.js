@@ -1,7 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 User = require('../models/user');
-
+const ImageKit = require('imagekit');
 
 const router = express.Router();
 const multer = require('multer');

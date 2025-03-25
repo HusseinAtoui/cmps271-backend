@@ -4,130 +4,297 @@ const multer = require('multer');
 const axios = require('axios');
 const FormData = require('form-data');
 const Article = require('../models/Article');
-const { verifyToken } = require('../middleware/authenticateUser'); 
+const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
+const ImageKit = require('imagekit');
 
-// ✅ Multer setup for memory storage (storing images in memory before upload)
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // Optional: Limit file size to 5MB
+});
 
-const uploadToImgur = async (imageBuffer) => {
-  if (!imageBuffer) {
-    throw new Error("Image buffer is empty, cannot upload.");
-  }
+// ✅ Allow both `image` and `document` fields
+const uploadFields = upload.fields([
+  { name: "image", maxCount: 2 },
+  { name: "document", maxCount: 1 }
+]);
+const imagekit = new ImageKit({
+  publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+  privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+});
 
-  const formData = new FormData();
-  formData.append("image", imageBuffer.toString("base64"));
-
+// ✅ Upload image to ImageKit
+const uploadToImageKit = async (fileBuffer, fileName) => {
   try {
-    const response = await axios.post("https://api.imgur.com/3/upload", formData, {
-      headers: {
-        Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`,
-        ...formData.getHeaders(),
-      },
+    const response = await imagekit.upload({
+      file: fileBuffer,
+      fileName: fileName || "event_image.jpg",
     });
-    return response.data.data.link; // ✅ Return Imgur URL
+    return response.url; // ✅ Return ImageKit URL
   } catch (err) {
-    console.error("❌ Imgur Upload Error:", err.response ? err.response.data : err.message);
-    throw new Error("Failed to upload image to Imgur.");
+    console.error("❌ ImageKit Upload Error:", err.message);
+    throw new Error("Failed to upload image.");
   }
 };
-
-// ✅ Get all articles
+// ✅ Get all approved articles (pending = true)
 router.get('/', async (req, res) => {
   try {
-    const articles = await Article.find();
+    const articles = await Article.find({ pending: true });
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// ✅ Get all non approved articles (pending = false)
+router.get('/pending', verifyToken, async (req, res) => {
+  try {
+    const articles = await Article.find({ pending: false });
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+router.post('/add', verifyToken, uploadFields, async (req, res) => {
+  console.log("Received form data:", req.body);
+  console.log("Files:", req.files); 
+
+  let imageUrl = "https://ik.imagekit.io/default.png";
+
+  // ✅ Handle image upload
+  if (req.files.image) {
+    try {
+      imageUrl = await uploadToImageKit(req.files.image[0].buffer, req.files.image[0].originalname);
+      console.log("Uploaded image URL:", imageUrl);
+    } catch (uploadErr) {
+      console.error("Image upload failed:", uploadErr);
+      return res.status(500).json({ error: "Image upload failed" });
+    }
+  } let summary = "";
+  if (req.body.text) {
+    try {
+      const summaryResponse = await axios.post(
+        'https://api.cohere.ai/generate',
+        {
+          model: 'command',
+          prompt: `Summarize the following text in a short paragraph:\n\n${req.body.text}\n\nSummary:`,
+          max_tokens: 100,
+          temperature: 0.3
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${process.env.COHERE_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      // Check for expected response structure from Cohere
+      if (
+        summaryResponse.data &&
+        summaryResponse.data.generations &&
+        Array.isArray(summaryResponse.data.generations) &&
+        summaryResponse.data.generations.length > 0
+      ) {
+        summary = summaryResponse.data.generations[0].text.trim();
+      } else if (summaryResponse.data.text) {
+        summary = summaryResponse.data.text.trim();
+      } else {
+        console.error("Invalid summary response format:", summaryResponse.data);
+        summary = req.body.description || "";
+      }
+    } catch (err) {
+      console.error("Error generating summary:", err.response?.data || err);
+      // Fall back to any provided description or empty string
+      summary = req.body.description || "";
+    }
+  }
+
+
+  try {
+    const newArticle = new Article({
+      title: req.body.title || "Untitled Article",
+      image: imageUrl,
+      description: summary || "Read more about this",
+      date: req.body.date || Date.now(),
+      text: req.body.text || "",
+      userID: req.user.id,
+      minToRead: req.body.minToRead || 1,
+      tag: req.body.tag || "general",
+      pending: false
+    });
+
+    const savedArticle = await newArticle.save();
+    console.log("✅ Article created:", savedArticle);
+    res.status(201).json(savedArticle);
+  } catch (err) {
+    console.error("❌ Error saving article:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ✅ Get article by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    res.json(article);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// ✅ Approve an article (Set pending = true)
+router.put('/approve/:id', verifyToken, async (req, res) => {
+  try {
+    const approvedArticle = await Article.findByIdAndUpdate(
+      req.params.id,
+      { pending: true },
+      { new: true }
+    )
+
+    if (!approvedArticle) return res.status(404).json({ error: "Article not found" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get all approved articles by an author (pending = true) 
+router.get('/authorapproved/:id', verifyToken, async (req, res) => {
+  try {
+    const authorId = req.params.id;
+    const articles = await Article.find({ userID: authorId, pending: true });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Get all pending articles by an author (pending = false) 
+router.get('/authorpending/:id', verifyToken, async (req, res) => {
+  try {
+    const authorId = req.params.id;
+    const articles = await Article.find({ userID: authorId, pending: false });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Add a Comment to the Article
+router.post('/comment-article', verifyToken, async (req, res) => {
+  const { articleId, text } = req.body;
+
+  if (!articleId || !text) {
+    return res.status(400).json({ message: "Article ID and comment text are required" });
+  }
+
+  try {
+    const article = await Article.findById(articleId);
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    article.comments.push({
+      text,
+      postedBy: req.user.id, // Using authenticated user's ID
+      created: Date.now()
+    });
+
+    await article.save();
+
+    res.status(200).json({ message: "Comment added successfully", data: article });
+  } catch (err) {
+    res.status(500).json({ message: "Error adding comment", error: err.message });
+  }
+});
+
+// ✅ Delete a Comment from an Article
+router.delete('/delete-comment', verifyToken, verifyToken, async (req, res) => {
+  const { articleId, commentId } = req.body;
+
+  if (!articleId || !commentId) {
+    return res.status(400).json({ message: "Article ID and comment ID are required" });
+  }
+
+  try {
+    const article = await Article.findById(articleId);
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    const comment = article.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    if (comment.postedBy.toString() !== req.user.id) {
+      return res.status(403).json({ message: "You are not authorized to delete this comment" });
+    }
+
+    comment.deleteOne();
+
+    await article.save();
+
+    res.status(200).json({ message: "Comment deleted successfully", data: article });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting comment", error: err.message });
+  }
+});
+
+// ✅ Add Kudos for the article 
+router.post('/give-kudos', verifyToken, async (req, res) => {
+  const { articleId } = req.body;
+
+  if (!articleId) {
+    return res.status(400).json({ message: "Article ID is required" });
+  }
+
+  try {
+
+    const article = await Article.findById(articleId);
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    if (!article.kudos.includes(req.user.userId)) {
+      article.kudos.push(req.user.userId);
+    } else {
+      return res.status(400).json({ message: "You have already given kudos to this article" });
+    }
+
+    await article.save();
+
+    await User.findByIdAndUpdate(req.user.userId, { $inc: { activity: 1 } });
+
+    res.status(200).json({
+      message: "Kudos given successfully",
+      kudosCount: article.kudos.length
+    });
+
+  } catch (err) {
+    res.status(500).json({ message: "Error giving kudos", error: err.message });
+  }
+
+});
+
+router.get('/tag/:tag', async (req, res) => {
+  try {
+    const tag = req.params.tag;
+    const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") },pending: true });
     res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ✅ Get article by ID
-router.get('/:id', async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ error: 'Article not found' });
-    res.json(article);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Create a new article
-router.post('/add', upload.single('image'), async (req, res) => {
-  try {
-    console.log("📩 Received event data:", req.body);
-    let picUrl = "https://i.imgur.com/default.png"; // Default profile pic
-    if (req.file) {
-      picUrl = await uploadToImgur(req.file.buffer);
-    }
-
-    const newArticle = new Article({
-      title: req.body.title,
-      image: picUrl,
-      description: req.body.description,
-      date: req.body.date,
-      text: req.body.text,
-      author: req.body.author,
-      minToRead: req.body.minToRead,
-      tag: req.body.tag
-    });
-
-    const savedArticle = await newArticle.save();
-    res.status(201).json(savedArticle);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ✅ Update an existing article by ID
-router.put('/update/:id', upload.single('image'), async (req, res) => {
-  try {
-    console.log("📩 Received Data:", req.body);
-    console.log("🖼️ Received File:", req.file); // ✅ Debugging
-
-    let imageUrl = undefined; // Keep the existing image if no new image is provided
-    if (req.file) {
-      imageUrl = await uploadToImgur(req.file.buffer);
-    }
-
-    const updatedArticle = await Article.findByIdAndUpdate(
-      req.params.id,
-      {
-        title: req.body.title,
-        description: req.body.description,
-        text: req.body.text,
-        date: req.body.date,
-        image: imageUrl || req.body.image, // Keep old image if no new upload
-        author: req.body.author,
-        minToRead: req.body.minToRead,
-        tag: req.body.tag,
-      },
-      { new: true } // ✅ Return updated document
-    );
-
-    if (!updatedArticle) return res.status(404).json({ error: "Article not found" });
-
-    res.status(200).json(updatedArticle);
-  } catch (err) {
-    console.error("❌ Error Updating Article:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/tag/:tag', async (req, res) => {
-  try {
-      const tag = req.params.tag;
-      const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") } });
-      res.json(articles);
-  } catch (err) {
-      res.status(500).json({ error: err.message });
-  }
-});
-
-
 // ✅ Delete an article by ID
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
