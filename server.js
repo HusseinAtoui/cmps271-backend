@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
 const cohere = require('cohere-ai');
+const session = require('express-session'); // <-- Added
+const passport = require('passport'); // <-- Added
 
 // Import routes
 const articlesRoutes = require('./api/articles');
@@ -21,6 +23,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ✅ Add session support for Passport
+app.use(session({
+  secret: 'your_secret_key', // Replace with a strong secret, ideally from your env variables
+  resave: false,
+  saveUninitialized: false
+}));
+
+// ✅ Initialize Passport middleware (with sessions)
+app.use(passport.initialize());
+app.use(passport.session());
+
 // ✅ Setup multer for handling file uploads (if needed globally)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -35,9 +48,7 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/articles', articlesRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/auth', authRoutes);
-
 app.use('/api/schedule', meetingsRoutes);
-// ...
 app.use('/api/summarize', summarizeRoute); // New meetings route
 app.use('/api/aiplagarism', aiPlagiarismRouter);
 app.use('/api/sentimentComments',sentimentanalysis)
