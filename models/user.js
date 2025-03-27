@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema({
   profilePicture:   { type: String, default: "" },
   verificationToken:{ type: String },
   verified:         { type: Boolean, default: false },
-  deactivated:      { type: Boolean, default: false }
+  deactivated:      { type: Boolean, default: false },
+  savedArticles:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Article' }] 
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
