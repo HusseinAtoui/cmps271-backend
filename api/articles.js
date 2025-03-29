@@ -149,23 +149,20 @@ router.get('/:id', async (req, res) => {
   }
 });
 // ✅ Approve an article (Set pending = true)
-
 router.put('/approve/:id', verifyToken, async (req, res) => {
   try {
     const approvedArticle = await Article.findByIdAndUpdate(
       req.params.id,
       { pending: true },
-      { new: true } // ✅ Ensure it returns the updated article
-    );
+      { new: true }
+    )
 
     if (!approvedArticle) return res.status(404).json({ error: "Article not found" });
 
-    res.json(approvedArticle); // ✅ Send the updated article back
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ✅ Get all approved articles by an author (pending = true) 
 router.get('/authorapproved/:id', verifyToken, async (req, res) => {
@@ -303,24 +300,7 @@ router.delete('/delete/:id', verifyToken, async (req, res) => {
     if (!article) return res.status(404).json({ error: 'Article not found' });
 
     await Article.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Article deleted successfully', articleId: req.params.id }); // ✅ Return deleted article ID
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-router.put('/disapprove/:id', verifyToken, async (req, res) => {
-  try {
-    const disapprovedArticle = await Article.findByIdAndUpdate(
-      req.params.id,
-      { pending: false },
-      { new: true }
-    );
-
-    if (!disapprovedArticle) {
-      return res.status(404).json({ error: "Article not found" });
-    }
-
-    res.status(200).json({ message: "Article disapproved", article: disapprovedArticle });
+    res.json({ message: 'Article deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
