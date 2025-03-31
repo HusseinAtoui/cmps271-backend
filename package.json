@@ -30,6 +30,7 @@
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "googleapis": "^148.0.0",
+    "ics": "^3.8.1",
     "imagekit": "^6.0.0",
     "imgur": "^1.0.2",
     "jsonwebtoken": "^9.0.2",
