@@ -53,6 +53,7 @@ async (accessToken, refreshToken, profile, done) => {
   try {
     // Check if a user with this email already exists
     let user = await User.findOne({ email: profile.emails[0].value });
+    console.log(user);
     if (!user) {
       // If not, create a new user using profile data from Google
       user = new User({
@@ -60,8 +61,9 @@ async (accessToken, refreshToken, profile, done) => {
         lastName: profile.name.familyName || '',
         email: profile.emails[0].value,
         profilePicture: profile.photos[0].value,
-        verified: true // Google accounts are considered verified
+        verified: true // Google accounts are considered verified 
       });
+      console.log(user);
       await user.save();
     }
     return done(null, user);
