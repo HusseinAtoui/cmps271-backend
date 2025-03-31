@@ -136,9 +136,14 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
 
 // ✅ Get article by ID
 router.get('/:id', async (req, res) => {
+  console.log('Fetching article with ID:', req.params.id);
+
   try {
     const article = await Article.findById(req.params.id);
+    if(!article){
+      article=Article.findOne({ _id: "67dc121b125ae57f98c9e7bb" });
 
+    }
     if (!article) {
       return res.status(404).json({ error: 'Article not found' });
     }
