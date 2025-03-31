@@ -382,5 +382,64 @@ router.delete('/delete-account', async (req, res) => {
     res.status(500).json({ status: "FAILED", message: "Failed to delete account." });
   }
 });
+// Forgot Password Route (Request Password Reset)
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ status: "FAILED", message: "Email is required." });
+  }
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    const resetToken = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1h' });
+    const resetLink = `https://afterthoughts.onrender.com/api/auth/reset-password/${resetToken}`;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Password Reset Request",
+      text: `Click the link to reset your password: ${resetLink}`
+    };
+
+    transporter.sendMail(mailOptions, (err) => {
+      if (err) {
+        return res.status(500).json({ status: "FAILED", message: "Error sending email." });
+      }
+      res.status(200).json({ status: "SUCCESS", message: "Password reset link sent to email." });
+    });
+  } catch (error) {
+    res.status(500).json({ status: "FAILED", message: "An error occurred." });
+  }
+});
+
+// Reset Password Route
+router.post('/reset-password/:token', async (req, res) => {
+  const { token } = req.params;
+  const { newPassword } = req.body;
+
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ status: "FAILED", message: "Invalid new password." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ status: "FAILED", message: "User not found." });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ status: "SUCCESS", message: "Password reset successfully." });
+  } catch (error) {
+    res.status(400).json({ status: "FAILED", message: "Invalid or expired token." });
+  }
+});
 
 module.exports = router;
