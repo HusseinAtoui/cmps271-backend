@@ -16,6 +16,8 @@ const summarizeRoute = require('./api/summarize');
 const aiPlagiarismRouter = require('./api/aiplagarism');
 const sentimentanalysis = require('./api/sentimentComments');
 const user = require('./api/users');
+const contactRoute = require('./api/contact');
+const subscribeRouter = require('./api/newsletter');
 
 // Create Express app
 const app = express();
@@ -55,13 +57,23 @@ app.use('/api/summarize', summarizeRoute); // New meetings route
 app.use('/api/aiplagarism', aiPlagiarismRouter);
 app.use('/api/sentimentComments', sentimentanalysis);
 app.use('/api/users', user);
+app.use('/api/contact', contactRoute);  
+app.use('/api/newsletter', subscribeRouter);
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {
   res.send('Afterthoughts Backend API is running');
 });
 
-// ✅ Global Error Handling Middleware
+
+// ✅ Handle Uncaught Exceptions & Rejections
+process.on("uncaughtException", (err) => {
+  console.error("❌ Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("❌ Unhandled Promise Rejection:", err);
+});
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
@@ -72,14 +84,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
-// ✅ Handle Uncaught Exceptions & Rejections
-process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("❌ Unhandled Promise Rejection:", err);
-});
-const contactRoute = require('./api/contact');
-app.use('/api/contact', contactRoute);
