@@ -33,26 +33,14 @@ router.get('/ping', (req, res) => {
 // POST route for general signup
 router.post('/signup', async (req, res) => {
     const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
   
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
+    const existing = await Subscriber.findOne({ email });
+    if (existing) return res.status(400).json({ error: 'Email already signed up.' });
   
-    try {
-      const existing = await Subscriber.findOne({ email });
-      if (existing) {
-        return res.status(400).json({ error: 'Email already signed up.' });
-      }
-  
-      const subscriber = new Subscriber({ email });
-      await subscriber.save();
-  
-      console.log("✅ Signup email:", email);
-      res.status(200).json({ message: "Thank you for signing up!" });
-    } catch (err) {
-      console.error("❌ Signup error:", err);
-      res.status(500).json({ error: "Internal server error" });
-    }
+    const subscriber = new Subscriber({ email });
+    await subscriber.save();
+    res.status(200).json({ message: "Thank you for signing up!" });
   });
   
 module.exports = router;
