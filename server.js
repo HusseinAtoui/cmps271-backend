@@ -58,7 +58,7 @@ app.use('/api/aiplagarism', aiPlagiarismRouter);
 app.use('/api/sentimentComments', sentimentanalysis);
 app.use('/api/users', user);
 app.use('/api/contact', contactRoute);  
-app.use('/api/newsletter', subscribeRouter);
+app.use('/api', subscribeRouter);
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {

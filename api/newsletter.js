@@ -1,22 +1,34 @@
 const express = require('express');
 const router = express.Router();
+const Subscriber = require('../models/Subscribers');
 
-// POST endpoint for subscribing to the newsletter
-router.post('/', (req, res) => {
-    const { email } = req.body;
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
+router.post('/', async (req, res) => {
+    console.log("📥 Received POST /api/newsletter", req.body);
+
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    const existing = await Subscriber.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ error: 'This email is already subscribed.' });
     }
-    try {
-        // Simulated successful action
-        console.log("Subscribed email:", email);
-        res.status(200).json({ message: "Subscription successful!" });
-    } catch (error) {
-        console.error("Subscription error:", error);
-        res.status(500).json({ error: "Error processing subscription" });
-    }
+
+    const subscriber = new Subscriber({ email });
+    await subscriber.save();
+
+    console.log("✅ Subscribed email:", email);
+    res.status(200).json({ message: "Subscription successful!" });
+  } catch (err) {
+    console.error("❌ Subscription error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
-
-
-
+router.get('/ping', (req, res) => {
+    res.send("pong");
+  });
+  
 module.exports = router;
