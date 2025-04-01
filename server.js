@@ -81,3 +81,5 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (err) => {
   console.error("❌ Unhandled Promise Rejection:", err);
 });
+const contactRoute = require('./api/contact');
+app.use('/api/contact', contactRoute);
