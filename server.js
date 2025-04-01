@@ -23,7 +23,10 @@ const subscribeRouter = require('./api/newsletter');
 const app = express();
 
 // ✅ Middleware
-app.use(cors());
+app.use(cors({
+  origin: "https://husseinatoui.github.io", 
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
