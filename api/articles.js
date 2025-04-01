@@ -140,10 +140,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     const article = await Article.findById(req.params.id);
-    if(!article){
-      article=Article.findOne({ _id: "67dc121b125ae57f98c9e7bb" });
-
-    }
+    
     if (!article) {
       return res.status(404).json({ error: 'Article not found' });
     }
