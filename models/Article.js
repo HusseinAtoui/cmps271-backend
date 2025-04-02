@@ -13,6 +13,8 @@ const articleSchema = new mongoose.Schema({
   comments: [{
     text: { type: String, required: true },
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    username: { type: String },          // username
+    userImage: { type: String },        // image
     created: { type: Date, default: Date.now },
   }],
   kudos: [{ type: mongoose.Schema.ObjectId, ref: "User" }],

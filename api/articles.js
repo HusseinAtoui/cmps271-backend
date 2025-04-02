@@ -201,13 +201,17 @@ router.post('/comment-article', verifyToken, async (req, res) => {
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
+    /// hey new 
+    const user = await User.findById(req.user.id);
 
     article.comments.push({
       text,
-      postedBy: req.user.id, // Using authenticated user's ID
+      postedBy: req.user.id,
+      username: `${user.firstName} ${user.lastName}`,
+      userImage: user.profilePicture,
       created: Date.now()
     });
-
+    /// hey new 
     await article.save();
 
     res.status(200).json({ message: "Comment added successfully", data: article });
