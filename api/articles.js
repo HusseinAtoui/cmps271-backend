@@ -121,7 +121,7 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
       userID: req.user.id,
       minToRead: req.body.minToRead || 1,
       tag: req.body.tag || "general",
-      pending: false
+      pending: true
     });
 
     const savedArticle = await newArticle.save();
