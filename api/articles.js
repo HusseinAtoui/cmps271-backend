@@ -135,21 +135,7 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
 
 
 // ✅ Get article by ID
-router.get('/:id', async (req, res) => {
-  console.log('Fetching article with ID:', req.params.id);
 
-  try {
-    const article = await Article.findById(req.params.id);
-    
-    if (!article) {
-      return res.status(404).json({ error: 'Article not found' });
-    }
-    res.json(article);
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 // ✅ Approve an article (Set pending = true)
 router.put('/approve/:id', verifyToken, async (req, res) => {
   try {
@@ -307,5 +293,21 @@ router.delete('/delete/:id', verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.get('/:id', async (req, res) => {
+  
+  console.log('Fetching article with ID:', req.params.id);
 
+  try {
+    const article = await Article.findById(req.params.id)
+    .populate('comments.postedBy', 'firstName lastName profilePicture'); 
+    
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+    res.json(article);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;
