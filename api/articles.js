@@ -308,21 +308,4 @@ router.delete('/delete/:id', verifyToken, async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
-  console.log('Fetching article with ID:', req.params.id);
-
-  try {
-    const article = await Article.findById(req.params.id)
-      .populate('comments.postedBy', 'firstName lastName profilePicture'); // Populates specific fields from the User model
-
-    if (!article) {
-      return res.status(404).json({ error: 'Article not found' });
-    }
-    
-    res.json(article);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 module.exports = router;
