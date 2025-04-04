@@ -233,7 +233,10 @@ router.delete('/delete-comment', verifyToken, verifyToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Error deleting comment", error: err.message });
   }
-});  router.post('/give-kudos', verifyToken, async (req, res) => {
+});
+
+// ✅ Add Kudos for the article 
+router.post('/give-kudos', verifyToken, async (req, res) => {
   const { articleId } = req.body;
 
   if (!articleId) {
@@ -241,33 +244,32 @@ router.delete('/delete-comment', verifyToken, verifyToken, async (req, res) => {
   }
 
   try {
+
     const article = await Article.findById(articleId);
     if (!article) {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    // Use req.user.id consistently
-    if (!article.kudos.includes(req.user.id)) {
-      article.kudos.push(req.user.id);
+    if (!article.kudos.includes(req.user.userId)) {
+      article.kudos.push(req.user.userId);
     } else {
       return res.status(400).json({ message: "You have already given kudos to this article" });
     }
 
     await article.save();
 
-    // Optionally update user activity
-    await User.findByIdAndUpdate(req.user.id, { $inc: { activity: 1 } });
+    await User.findByIdAndUpdate(req.user.userId, { $inc: { activity: 1 } });
 
     res.status(200).json({
       message: "Kudos given successfully",
       kudosCount: article.kudos.length
     });
+
   } catch (err) {
     res.status(500).json({ message: "Error giving kudos", error: err.message });
   }
-});
 
-// ✅ Toggle Kudos Functionality (Add/Remove Kudos)
+});// Example using Express.js
 router.post('/toggle-kudos', verifyToken, async (req, res) => {
   const { articleId } = req.body;
 
@@ -282,23 +284,22 @@ router.post('/toggle-kudos', verifyToken, async (req, res) => {
     }
 
     let action = "";
-    // Use req.user.id instead of req.user.userId for consistency
-    if (article.kudos.includes(req.user.id)) {
+    if (article.kudos.includes(req.user.userId)) {
       // Remove kudos
       article.kudos = article.kudos.filter(
-        id => id.toString() !== req.user.id
+        id => id.toString() !== req.user.userId
       );
       action = "removed";
     } else {
       // Add kudos
-      article.kudos.push(req.user.id);
+      article.kudos.push(req.user.userId);
       action = "added";
     }
 
     await article.save();
 
     // Optionally update user activity
-    await User.findByIdAndUpdate(req.user.id, { 
+    await User.findByIdAndUpdate(req.user.userId, { 
       $inc: { activity: (action === "added" ? 1 : -1) } 
     });
 
@@ -310,6 +311,7 @@ router.post('/toggle-kudos', verifyToken, async (req, res) => {
     res.status(500).json({ message: "Error toggling kudos", error: err.message });
   }
 });
+
 
 router.get('/tag/:tag', async (req, res) => {
   try {
