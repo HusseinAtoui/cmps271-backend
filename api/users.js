@@ -48,31 +48,38 @@ router.get("/:userId", async (req, res) => {
 });
 // ✅ Save Article Route
 // This route will add an article to the user's savedArticles array.
-// It uses verifyToken middleware to ensure the user is authenticated.
 router.post("/save-article", verifyToken, async (req, res) => {
-  const { articleId } = req.body;
-
   try {
-    // The verifyToken middleware should set req.user with the authenticated user's info
+    const { articleId } = req.body;
+    if (!articleId) {
+      return res.status(400).json({ message: "Article ID is required" });
+    }
+
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Check if the article is already saved
-    if (user.savedArticles.includes(articleId)) {
-      return res.status(400).json({ message: "Article already saved." });
+    // Toggle save status
+    const index = user.savedArticles.indexOf(articleId);
+    if (index !== -1) {
+      user.savedArticles.splice(index, 1);
+    } else {
+      user.savedArticles.push(articleId);
     }
 
-    // Add the article to savedArticles
-    user.savedArticles.push(articleId);
     await user.save();
 
     res.status(200).json({ 
-      message: "Article saved successfully", 
+      message: "Operation successful",
+      isSaved: index === -1, // Returns true if newly saved
       savedArticles: user.savedArticles 
     });
+
   } catch (err) {
-    console.error("Error saving article:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error in save-article:", err);
+    res.status(500).json({ 
+      error: "Internal server error",
+      details: err.message 
+    });
   }
 });
 router.get("/saved-articles", verifyToken, async (req, res) => {
