@@ -269,7 +269,49 @@ router.post('/give-kudos', verifyToken, async (req, res) => {
     res.status(500).json({ message: "Error giving kudos", error: err.message });
   }
 
+});// Example using Express.js
+router.post('/toggle-kudos', verifyToken, async (req, res) => {
+  const { articleId } = req.body;
+
+  if (!articleId) {
+    return res.status(400).json({ message: "Article ID is required" });
+  }
+
+  try {
+    const article = await Article.findById(articleId);
+    if (!article) {
+      return res.status(404).json({ message: "Article not found" });
+    }
+
+    let action = "";
+    if (article.kudos.includes(req.user.userId)) {
+      // Remove kudos
+      article.kudos = article.kudos.filter(
+        id => id.toString() !== req.user.userId
+      );
+      action = "removed";
+    } else {
+      // Add kudos
+      article.kudos.push(req.user.userId);
+      action = "added";
+    }
+
+    await article.save();
+
+    // Optionally update user activity
+    await User.findByIdAndUpdate(req.user.userId, { 
+      $inc: { activity: (action === "added" ? 1 : -1) } 
+    });
+
+    res.status(200).json({
+      message: `Kudos ${action} successfully`,
+      kudosCount: article.kudos.length
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Error toggling kudos", error: err.message });
+  }
 });
+
 
 router.get('/tag/:tag', async (req, res) => {
   try {
