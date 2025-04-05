@@ -299,6 +299,7 @@ router.get('/:id', async (req, res) => {
 
   try {
     const article = await Article.findById(req.params.id)
+    .populate('userID', 'firstName lastName')
     .populate('comments.postedBy', 'firstName lastName profilePicture'); 
     
     if (!article) {
