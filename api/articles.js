@@ -7,6 +7,7 @@ const Article = require('../models/Article');
 const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
 const ImageKit = require('imagekit');
+const User = require('../models/user');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -300,11 +301,16 @@ router.get('/:id', async (req, res) => {
   try {
     const article = await Article.findById(req.params.id)
     .populate('comments.postedBy', 'firstName lastName profilePicture'); 
+
+    const user = await User.findById(User)
+    .populate('userID','firstName lastName');
+    
     
     if (!article) {
       return res.status(404).json({ error: 'Article not found' });
     }
-    res.json(article);
+    console.log();
+    res.json({ article: article , user: user});
 
   } catch (err) {
     res.status(500).json({ error: err.message });
