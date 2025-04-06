@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { authorizeRoles } = require('../middleware/authorize');
 const axios = require('axios');
 const FormData = require('form-data');
 const Article = require('../models/Article');
@@ -138,7 +137,7 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
 // ✅ Get article by ID
 
 // ✅ Approve an article (Set pending = true)
-router.put('/approve/:id', verifyToken,authorizeRoles('admin'), async (req, res) => {
+router.put('/approve/:id', verifyToken, async (req, res) => {
   try {
     const approvedArticle = await Article.findByIdAndUpdate(
       req.params.id,

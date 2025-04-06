@@ -1,5 +1,4 @@
 const express = require('express');
-const { authorizeRoles } = require('../middleware/authorize');
 const router = express.Router();
 const multer = require('multer');
 const ImageKit = require('imagekit');
@@ -45,7 +44,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST: Create a new event
-router.post('/add', upload.single('image'),verifyToken, authorizeRoles('admin'), async (req, res) => {
+router.post('/add', upload.single('image'), async (req, res) => {
   console.log("📩 Received event data:", req.body);
   
   let imageUrl = "https://ik.imagekit.io/default.png"; // Default placeholder image URL
@@ -72,7 +71,7 @@ router.post('/add', upload.single('image'),verifyToken, authorizeRoles('admin'),
 });
 
 // PUT: Update an event
-router.put('/:id', upload.single('image'),verifyToken, authorizeRoles('admin'), async (req, res) => {
+router.put('/:id', upload.single('image'), async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {
@@ -104,7 +103,7 @@ router.put('/:id', upload.single('image'),verifyToken, authorizeRoles('admin'), 
 });
 
 // DELETE: Remove an event
-router.delete('/:id',verifyToken, authorizeRoles('admin'), async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
     if (!event) {

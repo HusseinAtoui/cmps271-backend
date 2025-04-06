@@ -9,8 +9,7 @@ const userSchema = new mongoose.Schema({
   profilePicture: { type: String, default: "" },
   verificationToken: { type: String },
   verified: { type: Boolean, default: false },
-  deactivated: { type: Boolean, default: false },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' }
+  deactivated: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
