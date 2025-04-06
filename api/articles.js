@@ -147,7 +147,7 @@ router.put('/approve/:id', verifyToken,authorizeRoles('admin'), async (req, res)
     )
 
     if (!approvedArticle) return res.status(404).json({ error: "Article not found" });
-
+    res.json(approvedArticle);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
