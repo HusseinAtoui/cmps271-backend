@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
             {
                 model: 'command',
                 prompt: `Summarize the following text in a short paragraph:\n\n${text}\n\nSummary:`,
-                max_tokens: 100,
+                max_tokens: 50,
                 temperature: 0.3
             },
             {
