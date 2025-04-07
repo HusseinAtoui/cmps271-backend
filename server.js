@@ -18,7 +18,6 @@ const sentimentanalysis = require('./api/sentimentComments');
 const user = require('./api/users');
 const contactRoute = require('./api/contact');
 const subscribeRouter = require('./api/newsletter');
-const citationRouter = require('./api/citation'); // adjust path as needed
 
 // Create Express app
 const app = express();
@@ -63,7 +62,6 @@ app.use('/api/sentimentComments', sentimentanalysis);
 app.use('/api/users', user);
 app.use('/api/contact', contactRoute);
 app.use('/api/newsletter', subscribeRouter);
-app.use('/api/citation', citationRouter);
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {
@@ -79,6 +77,7 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (err) => {
   console.error("❌ Unhandled Promise Rejection:", err);
 });
+
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
