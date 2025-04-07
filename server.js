@@ -18,13 +18,14 @@ const sentimentanalysis = require('./api/sentimentComments');
 const user = require('./api/users');
 const contactRoute = require('./api/contact');
 const subscribeRouter = require('./api/newsletter');
+const citationRouter = require('./api/citation'); // adjust path as needed
 
 // Create Express app
 const app = express();
 
 // ✅ Middleware
 app.use(cors({
-  origin: "https://husseinatoui.github.io", 
+  origin: "https://husseinatoui.github.io",
   credentials: true
 }));
 app.use(express.json());
@@ -60,8 +61,9 @@ app.use('/api/summarize', summarizeRoute); // New meetings route
 app.use('/api/aiplagarism', aiPlagiarismRouter);
 app.use('/api/sentimentComments', sentimentanalysis);
 app.use('/api/users', user);
-app.use('/api/contact', contactRoute);  
+app.use('/api/contact', contactRoute);
 app.use('/api/newsletter', subscribeRouter);
+app.use('/api/citation', citationRouter);
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {
