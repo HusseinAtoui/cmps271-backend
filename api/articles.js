@@ -163,7 +163,16 @@ router.get('/authorapproved/:id', verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ✅ Get all articles by an author (pending = true) 
+router.get('/author/:id', verifyToken, async (req, res) => {
+  try {
+    const authorId = req.params.id;
+    const articles = await Article.find({ userID: authorId });
 
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // ✅ Get all pending articles by an author (pending = false) 
 router.get('/authorpending/:id', verifyToken, async (req, res) => {
   try {
