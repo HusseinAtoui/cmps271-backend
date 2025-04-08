@@ -37,15 +37,15 @@ router.get('/run', async (req, res) => {
     await driver.findElement(By.id('settings-image')).click();
     const settingsDiv = await driver.findElement(By.id('settings-div'));
     await driver.wait(until.elementIsVisible(settingsDiv), 5000);
-  
+
     await driver.findElement(By.id('changeBioBtn')).click();
     const bioSection = await driver.findElement(By.id('bioSection'));
     await driver.wait(until.elementIsVisible(bioSection), 5000);
-    
+
     await driver.findElement(By.id('bioInput')).clear();
     await driver.findElement(By.id('bioInput')).sendKeys('New bio from Selenium test');
     await driver.findElement(By.id('saveBioBtn')).click();
-    
+
     await driver.wait(until.alertIsPresent(), 5000);
     const bioAlert = await driver.switchTo().alert();
     const bioAlertText = await bioAlert.getText();
@@ -70,7 +70,7 @@ router.get('/run', async (req, res) => {
 
     await driver.findElement(By.id('picInput')).sendKeys(testImagePath);
     await driver.sleep(1000); // Allow file upload time
-    
+
     await driver.findElement(By.id('savePicBtn')).click();
     await driver.wait(until.alertIsPresent(), 5000);
     const picAlert = await driver.switchTo().alert();
@@ -80,7 +80,40 @@ router.get('/run', async (req, res) => {
     if (!picAlertText.includes('Profile picture updated successfully')) {
       throw new Error(`Profile update failed: ${picAlertText}`);
     }
+
+    // 8. Test scheduler functionality
     console.log('✅ Profile picture updated successfully!');
+    await driver.findElement(By.id('toggleScheduler')).click();
+    await driver.wait(until.elementIsVisible(await driver.findElement(By.id('scheduler'))), 5000);
+
+    // Fill scheduler form
+    await driver.findElement(By.id('name')).sendKeys('Hussein');
+    await driver.findElement(By.id('email')).sendKeys('haa206@mail.aub.edu');
+    const dateField = await driver.findElement(By.id('meetingDate'));
+    await driver.executeScript(`
+        // Set ISO format for input
+        arguments[0].value = '2024-05-20T14:30';  // 20 May 2024 2:30 PM
+        
+        // Update displayed format if needed
+        arguments[0].dispatchEvent(new Event('input'));
+        arguments[0].dispatchEvent(new Event('change'));
+    `, dateField);
+    await driver.findElement(By.id('message')).sendKeys('Selenium test message');
+
+    // Submit form
+    await driver.findElement(By.css('#scheduleForm button[type="submit"]')).click();
+
+    // Verify response
+    await driver.wait(until.elementTextContains(
+      await driver.findElement(By.id('responseMessage')),
+      'successfully'
+    ), 5000);
+    const responseText = await driver.findElement(By.id('responseMessage')).getText();
+
+    if (!responseText.includes('successfully')) {
+      throw new Error(`Scheduler failed: ${responseText}`);
+    }
+    console.log('✅ Scheduler test passed!');
 
     const authToken = await driver.executeScript(
       "return localStorage.getItem('authToken');"
@@ -102,7 +135,7 @@ router.get('/run', async (req, res) => {
 
     // 4. Form Submission Preparation
     await driver.wait(until.elementLocated(By.id('submissionForm')), 20000);
-    
+
     // Add required hidden fields
     await driver.executeScript(`
       const addHiddenField = (name, value) => {
@@ -126,14 +159,14 @@ router.get('/run', async (req, res) => {
     for (const { frontendId, backendName, value } of fieldMappings) {
       const element = await driver.findElement(By.id(frontendId));
       await driver.wait(until.elementIsVisible(element), 5000);
-      
+
       // Update field name to match backend
       await driver.executeScript(
         (el, name) => el.setAttribute('name', name),
         element,
         backendName
       );
-      
+
       await element.clear();
       await element.sendKeys(value);
       console.log(`✅ Filled ${backendName} field`);
@@ -148,7 +181,7 @@ router.get('/run', async (req, res) => {
         acceptTypes: ['.pdf', '.doc', '.docx']
       },
       {
-        inputId: 'picture', 
+        inputId: 'picture',
         path: path.resolve(__dirname, 'image5.jpg'),
         maxSizeKB: 512,
         acceptTypes: ['.jpg', '.jpeg', '.png']
@@ -176,7 +209,7 @@ router.get('/run', async (req, res) => {
       // Upload file
       const input = await driver.findElement(By.id(inputId));
       await input.sendKeys(filePath);
-      
+
       // Verify UI feedback
       const fileNameElement = await driver.findElement(By.id(`${inputId}Name`));
       await driver.wait(
@@ -234,7 +267,7 @@ router.get('/run', async (req, res) => {
       const networkError = await driver.executeScript(
         "return window._submissionError || 'No network error captured'"
       );
-      
+
       throw new Error(`
         Submission failed!
         - Status: ${statusMessage}
@@ -242,47 +275,47 @@ router.get('/run', async (req, res) => {
         - Console Errors: ${logs.map(l => l.message).join('\n')}
       `);
     }
-   
 
-onsole.log('🌐 Navigating to submissions page...');
-await driver.get('https://husseinatoui.github.io/cmps271-frontend/subpage.html');
-await driver.wait(until.urlContains('subpage'), 10000);
 
-// 10. Wait for articles to load
-const gridContainer = await driver.wait(
-  until.elementLocated(By.css('.grid-container')),
-  15000
-);
+    onsole.log('🌐 Navigating to submissions page...');
+    await driver.get('https://husseinatoui.github.io/cmps271-frontend/subpage.html');
+    await driver.wait(until.urlContains('subpage'), 10000);
 
-// 11. Click "Continue reading" on first article
-const firstContinueButton = await driver.wait(
-  until.elementLocated(By.css('.continue-reading')),
-  20000
-);
+    // 10. Wait for articles to load
+    const gridContainer = await driver.wait(
+      until.elementLocated(By.css('.grid-container')),
+      15000
+    );
 
-// Scroll into view and click
-await driver.executeScript("arguments[0].scrollIntoView(true)", firstContinueButton);
-await driver.wait(until.elementIsVisible(firstContinueButton), 5000);
-await firstContinueButton.click();
+    // 11. Click "Continue reading" on first article
+    const firstContinueButton = await driver.wait(
+      until.elementLocated(By.css('.continue-reading')),
+      20000
+    );
 
-// 12. Verify article page load
-await driver.wait(async () => {
-  const url = await driver.getCurrentUrl();
-  return url.includes('Articles.html?id=');
-}, 15000);
+    // Scroll into view and click
+    await driver.executeScript("arguments[0].scrollIntoView(true)", firstContinueButton);
+    await driver.wait(until.elementIsVisible(firstContinueButton), 5000);
+    await firstContinueButton.click();
 
-console.log('✅ Successfully opened article detail page');
+    // 12. Verify article page load
+    await driver.wait(async () => {
+      const url = await driver.getCurrentUrl();
+      return url.includes('Articles.html?id=');
+    }, 15000);
 
-// Add to your existing response
-res.json({ 
-  message: '✅ All tests passed successfully!',
-  details: {
-    login: true,
-    profile_update: true,
-    submission: true,
-    article_navigation: true
-  }
-});
+    console.log('✅ Successfully opened article detail page');
+
+    // Add to your existing response
+    res.json({
+      message: '✅ All tests passed successfully!',
+      details: {
+        login: true,
+        profile_update: true,
+        submission: true,
+        article_navigation: true
+      }
+    });
 
 
 
@@ -311,9 +344,9 @@ res.json({
 
   } catch (error) {
     console.error('❌ Error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: error.message,
-      stack: error.stack 
+      stack: error.stack
     });
   } finally {
     if (driver) {
