@@ -65,7 +65,7 @@ app.use('/api/users', user);
 app.use('/api/contact', contactRoute);
 app.use('/api/newsletter', subscribeRouter);
 app.use('/api/seleniumTest',seleniumrouter);
-app.use('/api/quote', quotesRoutes);
+app.use('/api/quotes', quotesRoutes);
 
 // ✅ Default route for testing
 app.get('/', (req, res) => {
