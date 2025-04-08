@@ -154,20 +154,21 @@ router.put('/approve/:id', verifyToken,authorizeRoles('admin'), async (req, res)
 });
 
 // ✅ Get all approved articles by an author (pending = true) 
-router.get('/authorapproved/:id', verifyToken, async (req, res) => {
+router.get('/author', verifyToken, async (req, res) => {
   try {
-    const authorId = req.params.id;
-    const articles = await Article.find({ userID: authorId, pending: true });
 
+    const authorId = req.user.id;
+    const articles = await Article.find({ userID: authorId });
+    res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-// ✅ Get all articles by an author (pending = true) 
-router.get('/author/:id', verifyToken, async (req, res) => {
+// ✅ Get all articles by an author 
+router.get('/author/approved', verifyToken, async (req, res) => {
   try {
-    const authorId = req.params.id;
-    const articles = await Article.find({ userID: authorId });
+    const authorId = req.user.id;
+    const articles = await Article.find({ userID: authorId , pending: true});
 
   } catch (err) {
     res.status(500).json({ error: err.message });
