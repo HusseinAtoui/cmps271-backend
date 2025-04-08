@@ -63,7 +63,7 @@ router.get('/run', async (req, res) => {
     await driver.wait(until.elementIsVisible(picSection), 5000);
 
     // Verify test image exists
-    const testImagePath = path.join(__dirname, 'api', 'image5.jpg');
+    const testImagePath = path.join(__dirname, 'image5.jpg');
     if (!fs.existsSync(testImagePath)) {
       throw new Error(`Test image not found at: ${testImagePath}`);
     }
