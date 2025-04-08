@@ -80,9 +80,104 @@ router.get('/run', async (req, res) => {
     if (!picAlertText.includes('Profile picture updated successfully')) {
       throw new Error(`Profile update failed: ${picAlertText}`);
     }
+    console.log('✅ Profile picture updated successfully!');
+
+    // test event admin 
+    // Click Admin button
+    const adminButton = await driver.wait(
+      until.elementLocated(By.id('Adminpages')),
+      5000
+    );
+    await adminButton.click();
+
+    // Wait for admin section to appear
+    const adminSection = await driver.wait(
+      until.elementLocated(By.id('adminsection')),
+      5000
+    );
+    await driver.wait(until.elementIsVisible(adminSection), 5000);
+
+    // Click Events Admin link
+    const eventsAdminLink = await driver.wait(
+      until.elementLocated(By.id('eventsAdmin')),
+      5000
+    );
+    await eventsAdminLink.click();
+
+    // Wait for events admin page to load
+    await driver.wait(until.urlContains('adminEvents'), 10000);
+    console.log('✅ Navigated to Events Admin page');
+
+    // 8. Test Events Admin Functionality
+
+    console.log('🗓️ Testing Event Admin...');
+
+    // Ensure we're on the admin events page
+    await driver.wait(until.urlContains('adminEvents'), 10000);
+
+    // Generate unique event name
+    const eventName = `Test Event ${Date.now()}`;
+
+
+    // Fill event form
+    console.log('📝 Filling event form...');
+    await driver.wait(until.elementLocated(By.id('title')), 5000).sendKeys(eventName);
+    await driver.findElement(By.id('description')).sendKeys('Automated test event description');
+
+    // Set future date (next week)
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const formattedDate = nextWeek.toISOString().split('T')[0];
+    await driver.executeScript(`
+            arguments[0].value = '${formattedDate}';
+          `, await driver.findElement(By.id('date')));
+
+    // Upload image
+    await driver.findElement(By.id('image')).sendKeys(testImagePath);
+    await driver.sleep(1000); // Allow upload processing
+
+    // Submit form
+    console.log('🚀 Submitting event...');
+    await driver.findElement(By.css('#eventForm button[type="submit"]')).click();
+
+    // Handle success alert
+    await driver.wait(until.alertIsPresent(), 5000);
+    const eventAlert = await driver.switchTo().alert();
+    const alertText = await eventAlert.getText();
+    await eventAlert.accept();
+
+    if (!alertText.includes('successfully')) {
+      throw new Error(`Event creation failed: ${alertText}`);
+    }
+    console.log('✅ Event created successfully!');
+
+    // Verify event in list
+    console.log('🔍 Verifying event in list...');
+    const eventList = await driver.wait(
+      until.elementLocated(By.id('eventList')),
+      10000
+    );
+
+    await driver.wait(async () => {
+      const events = await eventList.findElements(By.css('.event-item'));
+      const titles = await Promise.all(events.map(async e =>
+      (await e.findElement(By.css('h3')).getText()
+      )));
+      return titles.includes(eventName);
+    }, 15000);
+
+    console.log('✅ Event appears in list!');
+
+    const authToken = await driver.executeScript(
+      "return localStorage.getItem('authToken');"
+    );
+    console.log('🔐 Auth Token:', authToken);
+
+    // Return to profile page after admin tests
+    await driver.get('https://husseinatoui.github.io/cmps271-frontend/profilepage.html');
+    await driver.wait(until.urlContains('profilepage'), 10000);
+
 
     // 8. Test scheduler functionality
-    console.log('✅ Profile picture updated successfully!');
     await driver.findElement(By.id('toggleScheduler')).click();
     await driver.wait(until.elementIsVisible(await driver.findElement(By.id('scheduler'))), 5000);
 
@@ -115,9 +210,7 @@ router.get('/run', async (req, res) => {
     }
     console.log('✅ Scheduler test passed!');
 
-    const authToken = await driver.executeScript(
-      "return localStorage.getItem('authToken');"
-    );
+
     console.log('🔐 Auth Token:', authToken);
 
     // 3. Navigate to Submission Page with Auth Preservation
@@ -276,9 +369,6 @@ router.get('/run', async (req, res) => {
       `);
     }
 
-
-
-
     console.log('🌐 Navigating to submissions page...'); // Fixed here
 
     await driver.get('https://husseinatoui.github.io/cmps271-frontend/subpage.html');
@@ -289,7 +379,7 @@ router.get('/run', async (req, res) => {
       until.elementsLocated(By.css('.continue-reading')),
       20000
     );
-    
+
     if (continueButtons.length === 0) {
       throw new Error('No articles found on submissions page');
     }
@@ -304,102 +394,84 @@ router.get('/run', async (req, res) => {
     // Verify article page load
     await driver.wait(until.urlContains('Articles.html?id='), 15000);
     console.log('✅ Successfully opened last article');
- // 6. Stay on article page with interaction
- console.log('📖 Reading article...');
-    
-// Add this after opening the article page in your existing test
-console.log('📄 Interacting with article page...');
+    // 6. Stay on article page with interaction
+    console.log('📖 Reading article...');
 
-// Wait for article content to load using your actual HTML structure
-const articleSection = await driver.wait(
-    until.elementLocated(By.id('article-section')),
-    15000
-);
+    // Add this after opening the article page in your existing test
+    console.log('📄 Interacting with article page...');
 
-// Verify title exists
-const articleTitle = await driver.wait(
-    until.elementLocated(By.css('#article-section h1.title')),
-    10000
-);
-console.log('📰 Article Title:', await articleTitle.getText());
+    // Wait for article content to load using your actual HTML structure
+    const articleSection = await driver.wait(
+      until.elementLocated(By.id('article-section')),
+      15000
+    );
 
-// Stay on page for reading
-await driver.sleep(3000);
+    // Verify title exists
+    const articleTitle = await driver.wait(
+      until.elementLocated(By.css('#article-section h1.title')),
+      10000
+    );
+    console.log('📰 Article Title:', await articleTitle.getText());
 
-// 6. Add comment test
-console.log('💬 Testing comment submission...');
-try {
-    // Scroll to comment section
-    const commentSection = await driver.findElement(By.css('.feedback'));
-    await driver.executeScript("arguments[0].scrollIntoView(true)", commentSection);
-    
-    // Fill comment
-    const commentField = await driver.wait(
+    // Stay on page for reading
+    await driver.sleep(3000);
+
+    // 6. Add comment test
+    console.log('💬 Testing comment submission...');
+    try {
+      // Scroll to comment section
+      const commentSection = await driver.findElement(By.css('.feedback'));
+      await driver.executeScript("arguments[0].scrollIntoView(true)", commentSection);
+
+      // Fill comment
+      const commentField = await driver.wait(
         until.elementLocated(By.id('comment')),
         5000
-    );
-    await commentField.sendKeys('This is a positive test comment from automated testing');
-    
-    // Click comment button
-    const commentButton = await driver.findElement(By.id('comment-btn'));
-    await commentButton.click();
-    
-    // Handle sentiment analysis alert
-    try {
+      );
+      await commentField.sendKeys('This is a positive test comment from automated testing');
+
+      // Click comment button
+      const commentButton = await driver.findElement(By.id('comment-btn'));
+      await commentButton.click();
+
+      // Handle sentiment analysis alert
+      try {
         await driver.wait(until.alertIsPresent(), 3000);
         const alert = await driver.switchTo().alert();
         const alertText = await alert.getText();
         await alert.accept();
-        
-        if (alertText.includes('negative sentiment')) {
-            console.log('⚠️ Negative comment blocked as expected');
-            // Retry with positive comment
-            await commentField.sendKeys(' This is a wonderful article!');
-            await commentButton.click();
-        }
-    } catch (alertError) {
-        console.log('No sentiment alert detected');
-    }
 
-    // Verify comment appears
-    const commentsContainer = await driver.wait(
+        if (alertText.includes('negative sentiment')) {
+          console.log('⚠️ Negative comment blocked as expected');
+          // Retry with positive comment
+          await commentField.sendKeys(' This is a wonderful article!');
+          await commentButton.click();
+        }
+      } catch (alertError) {
+        console.log('No sentiment alert detected');
+      }
+
+      // Verify comment appears
+      const commentsContainer = await driver.wait(
         until.elementLocated(By.id('profile-contain')),
         10000
-    );
-    
-    await driver.wait(
+      );
+
+      await driver.wait(
         until.elementLocated(By.css('.profile-other-feedback')),
         15000
-    );
-    
-    console.log('✅ Comment submitted successfully');
+      );
 
-} catch (error) {
-    console.error('❌ Comment submission failed:', error);
-    throw error;
-}
+      console.log('✅ Comment submitted successfully');
 
-// Final delay to observe results
-await driver.sleep(5000);
-console.log('⏲️ Finished article interaction');
+    } catch (error) {
+      console.error('❌ Comment submission failed:', error);
+      throw error;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // Final delay to observe results
+    await driver.sleep(5000);
+    console.log('⏲️ Finished article interaction');
 
     res.json({ message: '✅ All tests passed successfully!' });
 
