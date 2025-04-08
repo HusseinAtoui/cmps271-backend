@@ -297,6 +297,61 @@ router.delete('/delete/:id', verifyToken, async (req, res) => {
 router.get('/:id', async (req, res) => {
   
   console.log('Fetching article with ID:', req.params.id);
+// Save an article for the authenticated user
+router.post("/save-article", verifyToken, async (req, res) => {
+  const { articleId } = req.body;
+  const userId = req.user.userId;
+
+  if (!articleId) {
+    return res.status(400).json({ message: "Article ID is required." });
+  }
+
+  try {
+    // Add the articleId to savedArticles using $addToSet to prevent duplicates
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedArticles: articleId } },
+      { new: true }
+    );
+
+    res.json({
+      message: "Article saved successfully.",
+      savedArticles: user.savedArticles
+    });
+  } catch (error) {
+    console.error("Error saving article:", error);
+    res.status(500).json({ message: "Server error while saving article." });
+  }
+});
+
+// Remove an article from the authenticated user’s saved list
+router.post("/remove-saved-article", verifyToken, async (req, res) => {
+  const { articleId } = req.body;
+  const userId = req.user.userId;
+
+  if (!articleId) {
+    return res.status(400).json({ message: "Article ID is required." });
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedArticles: articleId } },
+      { new: true }
+    );
+
+    res.json({
+      message: "Article removed from saved articles.",
+      savedArticles: user.savedArticles
+    });
+  } catch (error) {
+    console.error("Error removing saved article:", error);
+    res.status(500).json({ message: "Server error while removing article." });
+  }
+});
+
+
+
 
   try {
     const article = await Article.findById(req.params.id)
