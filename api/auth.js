@@ -104,7 +104,7 @@ passport.authenticate('google', { failureRedirect: '/login' }),
 (req, res) => {
   // Generate a JWT token for the authenticated user
   const token = jwt.sign(
-    { id: req.user._id, email: req.user.email },
+    { id: req.user._id, email: req.user.email, role: user.role },
     JWT_SECRET,
     { expiresIn: '3h' }
   );
