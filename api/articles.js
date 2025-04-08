@@ -271,6 +271,52 @@ router.post('/give-kudos', verifyToken, async (req, res) => {
   }
 
 });
+// Get like status (for heart button state)
+router.get('/:id/like-status', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id)
+      .select('kudos');
+    
+    res.json({
+      hasLiked: article.kudos.some(k => k.equals(req.user.id))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// Add private like
+router.post('/add-like', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findByIdAndUpdate(
+      req.body.articleId,
+      {
+        $addToSet: { privateLikes: req.user.id },
+        $inc: { privateLikeCount: 1 }
+      },
+      { new: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove private like
+router.post('/remove-like', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findByIdAndUpdate(
+      req.body.articleId,
+      {
+        $pull: { privateLikes: req.user.id },
+        $inc: { privateLikeCount: -1 }
+      },
+      { new: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/tag/:tag', async (req, res) => {
   try {

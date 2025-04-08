@@ -24,7 +24,7 @@ const app = express();
 
 // ✅ Middleware
 app.use(cors({
-  origin: "https://husseinatoui.github.io", 
+  origin: "https://husseinatoui.github.io",
   credentials: true
 }));
 app.use(express.json());
@@ -60,7 +60,7 @@ app.use('/api/summarize', summarizeRoute); // New meetings route
 app.use('/api/aiplagarism', aiPlagiarismRouter);
 app.use('/api/sentimentComments', sentimentanalysis);
 app.use('/api/users', user);
-app.use('/api/contact', contactRoute);  
+app.use('/api/contact', contactRoute);
 app.use('/api/newsletter', subscribeRouter);
 
 // ✅ Default route for testing
@@ -77,6 +77,7 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (err) => {
   console.error("❌ Unhandled Promise Rejection:", err);
 });
+
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
