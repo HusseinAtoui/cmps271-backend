@@ -1,134 +1,108 @@
+const express = require('express');
 const { Builder, By, until } = require('selenium-webdriver');
-const path = require('path');
+require('chromedriver');
 
-// Base URL for your local server on port 3000
-const BASE_URL = 'http://localhost:3000';
+const router = express.Router();
 
-/**
- * Log in to the application.
- * Assumes a UI form at /login with fields named "email" and "password".
- */
-async function login(driver, email, password) {
-  await driver.get(`${BASE_URL}/login`);
-  const emailField = await driver.wait(until.elementLocated(By.name('email')), 10000);
-  await emailField.sendKeys(email);
-  
-  const passwordField = await driver.findElement(By.name('password'));
-  await passwordField.sendKeys(password);
-  
-  // Adjust this XPath if your button is different
-  const loginButton = await driver.findElement(By.xpath("//button[@type='submit']"));
-  await loginButton.click();
-  console.log('Logged in successfully');
-}
-
-/**
- * Submit an article.
- * Assumes a UI page (e.g., /articles/submit) with fields:
- * - title (name="title")
- * - text (name="text")
- * - optional file input for image (name="image")
- */
-async function submitArticle(driver, title, text, imagePath = null) {
-  await driver.get(`${BASE_URL}/articles/submit`);
-  const titleField = await driver.wait(until.elementLocated(By.name('title')), 10000);
-  await titleField.sendKeys(title);
-  
-  const textField = await driver.findElement(By.name('text'));
-  await textField.sendKeys(text);
-  
-  if (imagePath) {
-    const imageInput = await driver.findElement(By.name('image'));
-    // Ensure the file path is absolute
-    await imageInput.sendKeys(path.resolve(imagePath));
-  }
-  
-  // Adjust the submit button XPath to match your form
-  const submitButton = await driver.findElement(By.xpath("//button[@type='submit']"));
-  await submitButton.click();
-  console.log('Article submitted');
-}
-
-/**
- * Add a comment to an article.
- * Assumes a UI page for article details at /articles/:id with:
- * - a field for comment text (name="text")
- * - a button labeled "Add Comment"
- */
-async function commentOnArticle(driver, articleId, commentText) {
-  await driver.get(`${BASE_URL}/articles/${articleId}`);
-  const commentField = await driver.wait(until.elementLocated(By.name('text')), 10000);
-  await commentField.sendKeys(commentText);
-  
-  const commentButton = await driver.findElement(By.xpath("//button[contains(text(),'Add Comment')]"));
-  await commentButton.click();
-  console.log('Comment added');
-}
-
-/**
- * Delete an article.
- * Assumes the article details page includes a "Delete" button and a confirmation step.
- */
-async function deleteArticle(driver, articleId) {
-  await driver.get(`${BASE_URL}/articles/${articleId}`);
-  const deleteButton = await driver.wait(until.elementLocated(By.xpath("//button[contains(text(),'Delete')]")), 10000);
-  await deleteButton.click();
-  
-  // Wait for and click the confirmation button if applicable
-  const confirmButton = await driver.wait(until.elementLocated(By.xpath("//button[contains(text(),'Confirm')]")), 10000);
-  await confirmButton.click();
-  console.log('Article deleted');
-}
-
-/**
- * Log out.
- * Assumes a UI page at /logout with a logout button.
- */
-async function logout(driver) {
-  await driver.get(`${BASE_URL}/logout`);
-  const logoutButton = await driver.wait(until.elementLocated(By.xpath("//button[contains(text(),'Logout')]")), 10000);
-  await logoutButton.click();
-  console.log('Logged out');
-}
-
-/**
- * Main test flow.
- * This script logs in, submits an article, adds a comment, and logs out.
- */
-(async function main() {
-  // Initialize Chrome WebDriver (make sure chromedriver is installed)
-  let driver = await new Builder().forBrowser('chrome').build();
+router.get('/run', async (req, res) => {
+  let driver;
   try {
-    // 1. Log in
-    await login(driver, 'testuser@example.com', 'password123');
-    await driver.sleep(2000); // brief pause
+    driver = await new Builder().forBrowser('chrome').build();
 
-    // 2. Submit an article.
-    // Ensure that the UI page exists and the field names match.
-    await submitArticle(driver, 
-      'Selenium Test Article', 
-      'This is a test article submitted via Selenium.', 
-      'path/to/your/image.jpg' // change or pass null if not testing image upload
-    );
-    await driver.sleep(2000);
+    // 1. Open login page
+    await driver.get('https://husseinatoui.github.io/cmps271-frontend/loginPage.html');
+    await driver.sleep(3000); // let it render
 
-    // 3. Comment on an article.
-    // You need to supply a valid article ID; this could be captured dynamically.
-    const articleId = 'REPLACE_WITH_ACTUAL_ARTICLE_ID';
-    await commentOnArticle(driver, articleId, 'This is a test comment.');
-    await driver.sleep(2000);
+    // 2. Fill login form
+    await driver.wait(until.elementLocated(By.id('email')), 10000);
+    await driver.findElement(By.id('email')).sendKeys('bareajoudi@gmail.com');
+    await driver.findElement(By.id('password')).sendKeys('Mohamadj1@234');
 
-    // 4. Optionally, delete the article.
-    // Uncomment to test deletion:
-    // await deleteArticle(driver, articleId);
-    // await driver.sleep(2000);
+    // 3. Click login
+    await driver.findElement(By.css('.login-btn2')).click();
 
-    // 5. Log out.
-    await logout(driver);
-    await driver.sleep(2000);
+    // 4. Wait for and handle alert
+    await driver.wait(until.alertIsPresent(), 10000);
+    let alert = await driver.switchTo().alert();
+    console.log("⚠️ Alert text:", await alert.getText());
+    await alert.accept(); // Close the "Login successful!" alert
+
+    // 5. Wait for redirect to profilepage.html
+    await driver.wait(until.urlContains('profilepage'), 10000);
+
+    console.log('✅ Login successful!');
+
+
+
+
+    // 6. Test changing bio
+    // Click settings button
+    await driver.findElement(By.id('settings-image')).click();
+    
+    // Wait for settings menu to be visible
+    const settingsDiv = await driver.findElement(By.id('settings-div'));
+    await driver.wait(until.elementIsVisible(settingsDiv), 5000);
+    
+    // Click "Change Bio" button
+    await driver.wait(until.elementLocated(By.id('changeBioBtn')), 5000);
+    await driver.findElement(By.id('changeBioBtn')).click();
+    
+    // Wait for bio section to be visible
+    const bioSection = await driver.findElement(By.id('bioSection'));
+    await driver.wait(until.elementIsVisible(bioSection), 5000);
+    await driver.findElement(By.id('bioInput')).clear();
+    await driver.findElement(By.id('bioInput')).sendKeys('New bio from Selenium test');
+    await driver.findElement(By.id('saveBioBtn')).click();
+    
+    // Wait for success alert
+    await driver.wait(until.alertIsPresent(), 5000);
+    const bioAlert = await driver.switchTo().alert();
+    const bioAlertText = await bioAlert.getText();
+    console.log('Bio alert text:', bioAlertText);
+    await bioAlert.accept();
+
+    if (bioAlertText.includes('Bio updated successfully')) {
+      console.log('✅ Bio updated successfully!');
+    } else {
+      throw new Error(`Bio update failed. Alert text: ${bioAlertText}`);
+    }
+
+   
+    // 3. Test profile picture change (new code)
+    // Open profile picture section
+    await driver.findElement(By.id('changePicBtn')).click();
+    const picSection = await driver.findElement(By.id('picSection'));
+    await driver.wait(until.elementIsVisible(picSection), 5000);
+
+    // Upload test image (replace with your image path)
+    const testImagePath = path.resolve(__dirname, 'test-image.jpg');
+    await driver.findElement(By.id('picInput')).sendKeys(testImagePath);
+
+    // Save changes
+    await driver.findElement(By.id('savePicBtn')).click();
+
+    // Verify success alert
+    await driver.wait(until.alertIsPresent(), 5000);
+    const picAlert = await driver.switchTo().alert();
+    const picAlertText = await picAlert.getText();
+    await picAlert.accept();
+
+    if (!picAlertText.includes('Profile picture updated successfully')) {
+      throw new Error(`Profile picture update failed. Alert text: ${picAlertText}`);
+    }
+
+    console.log('✅ All tests passed!');
+    res.json({ message: '✅ Login, bio change, and profile picture update tests passed!' });
+
   } catch (error) {
-    console.error('Error during Selenium test:', error);
+    console.error('❌ Error during login test:', error);
+    res.status(500).json({ error: 'Error during login test.' });
   } finally {
-    await driver.quit();
+    if (driver) {
+      await driver.quit();
+    }
   }
-})();
+  
+});
+
+module.exports = router;
