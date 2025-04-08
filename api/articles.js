@@ -180,7 +180,7 @@ router.get('/author-stats', verifyToken, async (req, res) => {
       likes: likesArray[index],
       comments: commentsArray[index]
     }));
-
+    console.log(stats);
     res.json({
       success: true,
       stats,
