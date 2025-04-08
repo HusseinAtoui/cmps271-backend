@@ -152,7 +152,49 @@ router.put('/approve/:id', verifyToken,authorizeRoles('admin'), async (req, res)
     res.status(500).json({ error: err.message });
   }
 });
+router.get('/author-stats', verifyToken, async (req, res) => {
+  try {
+    const authorId = req.user.id;
 
+    // Get all articles by this author
+    const articles = await Article.find({ userID: authorId })
+      .select('title kudos comments createdAt')
+      .lean(); // Convert to plain JS objects for better performance
+
+    // Calculate totals and create arrays
+    const likesArray = articles.map(article => article.kudos.length);
+    const commentsArray = articles.map(article => article.comments.length);
+    
+    const stats = {
+      totalArticles: articles.length,
+      totalLikes: likesArray.reduce((sum, num) => sum + num, 0),
+      totalComments: commentsArray.reduce((sum, num) => sum + num, 0),
+      likesPerArticle: likesArray,
+      commentsPerArticle: commentsArray
+    };
+
+    // Include full article details if needed
+    const articleDetails = articles.map((article, index) => ({
+      title: article.title,
+      createdAt: article.createdAt,
+      likes: likesArray[index],
+      comments: commentsArray[index]
+    }));
+
+    res.json({
+      success: true,
+      stats,
+      articles: articleDetails
+    });
+
+  } catch (err) {
+    console.error('Error fetching author stats:', err);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to retrieve author statistics' 
+    });
+  }
+});
 // ✅ Get all approved articles by an author (pending = true) 
 router.get('/author', verifyToken, async (req, res) => {
   try {
