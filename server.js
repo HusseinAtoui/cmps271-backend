@@ -19,6 +19,8 @@ const user = require('./api/users');
 const contactRoute = require('./api/contact');
 const subscribeRouter = require('./api/newsletter');
 const seleniumrouter=require('./api/seleniumTest');
+const quotesRoutes = require('./api/quotes')
+
 // Create Express app
 const app = express();
 
@@ -63,6 +65,8 @@ app.use('/api/users', user);
 app.use('/api/contact', contactRoute);
 app.use('/api/newsletter', subscribeRouter);
 app.use('/api/seleniumTest',seleniumrouter);
+app.use('/api/quotes', quotesRoutes);
+
 // ✅ Default route for testing
 app.get('/', (req, res) => {
   res.send('Afterthoughts Backend API is running');
