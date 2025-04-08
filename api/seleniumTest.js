@@ -277,50 +277,111 @@ router.get('/run', async (req, res) => {
     }
 
 
-    onsole.log('🌐 Navigating to submissions page...');
+
+
+    console.log('🌐 Navigating to submissions page...'); // Fixed here
+
     await driver.get('https://husseinatoui.github.io/cmps271-frontend/subpage.html');
     await driver.wait(until.urlContains('subpage'), 10000);
 
-    // 10. Wait for articles to load
-    const gridContainer = await driver.wait(
-      until.elementLocated(By.css('.grid-container')),
-      15000
-    );
-
-    // 11. Click "Continue reading" on first article
-    const firstContinueButton = await driver.wait(
-      until.elementLocated(By.css('.continue-reading')),
+    // 5. Interact with Last Article
+    const continueButtons = await driver.wait(
+      until.elementsLocated(By.css('.continue-reading')),
       20000
     );
+    
+    if (continueButtons.length === 0) {
+      throw new Error('No articles found on submissions page');
+    }
 
-    // Scroll into view and click
-    await driver.executeScript("arguments[0].scrollIntoView(true)", firstContinueButton);
-    await driver.wait(until.elementIsVisible(firstContinueButton), 5000);
-    await firstContinueButton.click();
+    const lastArticleButton = continueButtons[continueButtons.length - 1];
+    await driver.executeScript(
+      "arguments[0].scrollIntoView(true)",
+      lastArticleButton
+    );
+    await lastArticleButton.click();
 
-    // 12. Verify article page load
-    await driver.wait(async () => {
-      const url = await driver.getCurrentUrl();
-      return url.includes('Articles.html?id=');
-    }, 15000);
+    // Verify article page load
+    await driver.wait(until.urlContains('Articles.html?id='), 15000);
+    console.log('✅ Successfully opened last article');
+ // 6. Stay on article page with interaction
+ console.log('📖 Reading article...');
+    
+// Add this after opening the article page in your existing test
+console.log('📄 Interacting with article page...');
 
-    console.log('✅ Successfully opened article detail page');
+// Wait for article content to load using your actual HTML structure
+const articleSection = await driver.wait(
+    until.elementLocated(By.id('article-section')),
+    15000
+);
 
-    // Add to your existing response
-    res.json({
-      message: '✅ All tests passed successfully!',
-      details: {
-        login: true,
-        profile_update: true,
-        submission: true,
-        article_navigation: true
-      }
-    });
+// Verify title exists
+const articleTitle = await driver.wait(
+    until.elementLocated(By.css('#article-section h1.title')),
+    10000
+);
+console.log('📰 Article Title:', await articleTitle.getText());
 
+// Stay on page for reading
+await driver.sleep(3000);
 
+// 6. Add comment test
+console.log('💬 Testing comment submission...');
+try {
+    // Scroll to comment section
+    const commentSection = await driver.findElement(By.css('.feedback'));
+    await driver.executeScript("arguments[0].scrollIntoView(true)", commentSection);
+    
+    // Fill comment
+    const commentField = await driver.wait(
+        until.elementLocated(By.id('comment')),
+        5000
+    );
+    await commentField.sendKeys('This is a positive test comment from automated testing');
+    
+    // Click comment button
+    const commentButton = await driver.findElement(By.id('comment-btn'));
+    await commentButton.click();
+    
+    // Handle sentiment analysis alert
+    try {
+        await driver.wait(until.alertIsPresent(), 3000);
+        const alert = await driver.switchTo().alert();
+        const alertText = await alert.getText();
+        await alert.accept();
+        
+        if (alertText.includes('negative sentiment')) {
+            console.log('⚠️ Negative comment blocked as expected');
+            // Retry with positive comment
+            await commentField.sendKeys(' This is a wonderful article!');
+            await commentButton.click();
+        }
+    } catch (alertError) {
+        console.log('No sentiment alert detected');
+    }
 
+    // Verify comment appears
+    const commentsContainer = await driver.wait(
+        until.elementLocated(By.id('profile-contain')),
+        10000
+    );
+    
+    await driver.wait(
+        until.elementLocated(By.css('.profile-other-feedback')),
+        15000
+    );
+    
+    console.log('✅ Comment submitted successfully');
 
+} catch (error) {
+    console.error('❌ Comment submission failed:', error);
+    throw error;
+}
 
+// Final delay to observe results
+await driver.sleep(5000);
+console.log('⏲️ Finished article interaction');
 
 
 
