@@ -326,11 +326,10 @@ router.post('/give-kudos', verifyToken, async (req, res) => {
 // Get like status (for heart button state)
 router.get('/:id/like-status', verifyToken, async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id)
-      .select('kudos');
-    
+    const article = await Article.findById(req.params.id).select('privateLikes');
+
     res.json({
-      hasLiked: article.kudos.some(k => k.equals(req.user.id))
+      hasLiked: article.privateLikes.some(userId => userId.equals(req.user.id))
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
