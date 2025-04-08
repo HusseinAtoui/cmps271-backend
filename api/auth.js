@@ -108,8 +108,20 @@ passport.authenticate('google', { failureRedirect: '/login' }),
     JWT_SECRET,
     { expiresIn: '3h' }
   );
+  const userData = {
+    id: user._id.toString(),
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    profilePicture: user.profilePicture,
+    bio: user.bio
+  };
+  
+  // Convert to URL-safe string
+  const userDataString = encodeURIComponent(JSON.stringify(userData));
+  
   // Redirect to your frontend with the token in query parameters or handle it as needed
-  res.redirect(`https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}`);
+  res.redirect(`https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}&user=${userDataString}`);
 }
 );
 // end of google login stuff
