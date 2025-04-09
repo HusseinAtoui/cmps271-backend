@@ -152,6 +152,18 @@ router.put('/approve/:id', verifyToken,authorizeRoles('admin'), async (req, res)
     res.status(500).json({ error: err.message });
   }
 });
+// ✅ Delete an article by ID
+router.delete('/delete/:id', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+
+    await Article.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Article deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get('/author-stats', verifyToken, async (req, res) => {
   try {
     const authorId = req.user.id;
@@ -379,18 +391,6 @@ router.get('/tag/:tag', async (req, res) => {
   }
 });
 
-// ✅ Delete an article by ID
-router.delete('/delete/:id', verifyToken, async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id);
-    if (!article) return res.status(404).json({ error: 'Article not found' });
-
-    await Article.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Article deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 router.get('/:id', async (req, res) => {
   
   console.log('Fetching article with ID:', req.params.id);
