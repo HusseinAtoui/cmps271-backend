@@ -56,6 +56,19 @@ router.get('/pending', verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// Like Status
+router.get('/:id/like-status', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id).select('kudos');
+
+    res.json({
+      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))  
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post('/add', verifyToken, uploadFields, async (req, res) => {
   console.log("Received form data:", req.body);
   console.log("Files:", req.files); 
@@ -367,18 +380,6 @@ router.post('/remove-like', verifyToken, async (req, res) => {
   }
 });
 
-// Like Status
-router.get('/:id/like-status', verifyToken, async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id).select('kudos');
-
-    res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))  
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 router.get('/tag/:tag', async (req, res) => {
   try {
