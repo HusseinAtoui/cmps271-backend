@@ -354,7 +354,7 @@ router.post('/add-like', verifyToken, async (req, res) => {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $addToSet: { kudos: req.user.id },  
+        $addToSet: { kudos: req.user.userId },  
       },
       { new: true }
     );
@@ -370,7 +370,7 @@ router.post('/remove-like', verifyToken, async (req, res) => {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $pull: { kudos: req.user.id },  
+        $pull: { kudos: req.user.userId },  
       },
       { new: true }
     );
