@@ -300,7 +300,7 @@ router.delete('/delete-comment', verifyToken, verifyToken, async (req, res) => {
   }
 });
 
-// ✅ Add Kudos for the article 
+// ✅ Add Kudos for the article but this one does nothing lowkey could remove it
 router.post('/give-kudos', verifyToken, async (req, res) => {
   const { articleId } = req.body;
 
@@ -335,26 +335,13 @@ router.post('/give-kudos', verifyToken, async (req, res) => {
   }
 
 });
-// Get like status (for heart button state)
-router.get('/:id/like-status', verifyToken, async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id).select('privateLikes');
-
-    res.json({
-      hasLiked: article.privateLikes.some(userId => userId.equals(req.user.id))
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// Add private like
+// Add Like
 router.post('/add-like', verifyToken, async (req, res) => {
   try {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $addToSet: { privateLikes: req.user.id },
-        $inc: { privateLikeCount: 1 }
+        $addToSet: { kudos: req.user.id },  
       },
       { new: true }
     );
@@ -364,18 +351,30 @@ router.post('/add-like', verifyToken, async (req, res) => {
   }
 });
 
-// Remove private like
+// Remove Like
 router.post('/remove-like', verifyToken, async (req, res) => {
   try {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $pull: { privateLikes: req.user.id },
-        $inc: { privateLikeCount: -1 }
+        $pull: { kudos: req.user.id },  
       },
       { new: true }
     );
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Like Status
+router.get('/:id/like-status', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id).select('kudos');
+
+    res.json({
+      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))  
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
