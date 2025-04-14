@@ -58,16 +58,30 @@ router.get('/pending', verifyToken, async (req, res) => {
 });
 // Like Status
 router.get('/:id/like-status', verifyToken, async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id).select('kudos');
+  const { articleId } = req.body;
 
-    res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.userId))  
-    });
+  try {
+    console.log("Checking like status for article:", req.params.id);
+    console.log("User ID from token:", req.user.id);
+
+    const article = await Article.findById(articleId).select('kudos');
+
+    if (!article) {
+      console.log("Article not found.");
+      return res.status(404).json({ error: "Article not found" });
+    }
+
+    const hasLiked = article.kudos.some(userId => userId.equals(req.user.id));
+    
+    console.log("Has user liked?", hasLiked);
+
+    res.json({ hasLiked });
   } catch (err) {
+    console.error("Error in like-status route:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.post('/add', verifyToken, uploadFields, async (req, res) => {
   console.log("Received form data:", req.body);
