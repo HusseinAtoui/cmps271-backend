@@ -62,7 +62,7 @@ router.get('/:id/like-status', verifyToken, async (req, res) => {
     const article = await Article.findById(req.params.id).select('kudos');
 
     res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))  
+      hasLiked: article.kudos.some(userId => userId.equals(req.user.userId))  
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
