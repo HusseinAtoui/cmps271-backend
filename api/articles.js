@@ -56,18 +56,6 @@ router.get('/pending', verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// Like Status
-router.get('/:id/like-status', verifyToken, async (req, res) => {
-  try {
-    const article = await Article.findById(req.params.id).select('kudos');
-
-    res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.userId))  
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 router.post('/add', verifyToken, uploadFields, async (req, res) => {
   console.log("Received form data:", req.body);
@@ -146,7 +134,6 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ✅ Get article by ID
 
@@ -386,6 +373,19 @@ router.get('/tag/:tag', async (req, res) => {
     const tag = req.params.tag;
     const articles = await Article.find({ tag: { $regex: new RegExp("^" + tag + "$", "i") },pending: true });
     res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Like Status
+router.get('/1/2/3/4/:id/like-status', verifyToken, async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id).select('kudos');
+
+    res.json({
+      hasLiked: article.kudos.some(userId => userId.equals(req.user.userId))  
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
