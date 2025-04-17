@@ -341,7 +341,7 @@ router.post('/add-like', verifyToken, async (req, res) => {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $addToSet: { kudos: req.user.userId },  
+        $addToSet: { kudos: req.user.id },  
       },
       { new: true }
     );
@@ -357,7 +357,7 @@ router.post('/remove-like', verifyToken, async (req, res) => {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $pull: { kudos: req.user.userId },  
+        $pull: { kudos: req.user.id },  
       },
       { new: true }
     );
@@ -379,12 +379,12 @@ router.get('/tag/:tag', async (req, res) => {
 });
 
 // Like Status
-router.get('/1/2/3/4/:id/like-status', verifyToken, async (req, res) => {
+router.get('/:id/like-status', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id).select('kudos');
 
     res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.userId))  
+      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
