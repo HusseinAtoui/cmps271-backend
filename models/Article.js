@@ -16,6 +16,8 @@ const articleSchema = new mongoose.Schema({
     created: { type: Date, default: Date.now },
   }],
   kudos: [{ type: mongoose.Schema.ObjectId, ref: "User" }],
+  vector:    { type: [Number], default: [] }  // <— embedding vector
+
 });
 
 module.exports = mongoose.model('Article', articleSchema);
