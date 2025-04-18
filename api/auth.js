@@ -10,6 +10,7 @@ const multer = require('multer');
 const mongoose = require('mongoose');
 const ImageKit = require('imagekit');
 const User = require('../models/user');
+const verifyCaptcha = require('./path/to/captcha.js');
 require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -215,7 +216,7 @@ router.get('/verify/:token', async (req, res) => {
 });
 
 // User Login Route with JWT Authentication
-router.post('/login', async (req, res) => {
+router.post('/login',verifyCaptcha,  async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
