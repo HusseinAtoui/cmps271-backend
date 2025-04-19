@@ -38,6 +38,20 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
     throw new Error("Failed to upload image.");
   }
 };
+
+// Pre-load USE model once
+let useModelPromise = use.load();
+
+// Cosine similarity helper
+function cosine(a, b) {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot  += a[i] * b[i];
+    magA += a[i] * a[i];
+    magB += b[i] * b[i];
+  }
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
 // ✅ Get all approved articles (pending = true)
 router.get('/', async (req, res) => {
   try {
@@ -464,4 +478,48 @@ router.post("/remove-saved-article", verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+// Add recommendation route at bottom:
+router.get('/recommend/:slug', async (req, res) => {
+  const { slug } = req.params;
+  const k = parseInt(req.query.k, 10) || 5;
+
+  try {
+    // 1. Fetch current article
+    const current = await Article.findOne({ slug }).lean();
+    if (!current || !current.vector || !current.vector.length) {
+      return res.status(404).json({ error: 'Article not found or missing embedding' });
+    }
+
+    // 2. Optionally refresh embedding:
+    // const model = await useModelPromise;
+    // const [ newVec ] = await (await model.embed([`${current.title}. ${current.description || current.text.slice(0,200)}`])).array();
+    // const queryVec = newVec;
+    const queryVec = current.vector;
+
+    // 3. Fetch candidate articles (exclude current)
+    const candidates = await Article.find({
+      vector: { $exists: true, $not: { $size: 0 } },
+      slug:   { $ne: slug }
+    }).lean();
+
+    // 4. Compute scores
+    const scored = candidates.map(doc => ({
+      title: doc.title,
+      slug:  doc.slug,
+      score: cosine(doc.vector, queryVec)
+    }));
+
+    // 5. Sort & return top-k
+    scored.sort((a, b) => b.score - a.score);
+    const recs = scored.slice(0, k).map(({ title, slug }) => ({ title, slug }));
+
+    return res.json({ recommendations: recs });
+  } catch (err) {
+    console.error('[recommend] error:', err);
+    return res.status(500).json({ error: 'Failed to compute recommendations' });
+  }
+});
+
 module.exports = router;

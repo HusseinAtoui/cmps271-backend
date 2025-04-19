@@ -67,6 +67,22 @@ app.use('/api/newsletter', subscribeRouter);
 app.use('/api/seleniumTest',seleniumrouter);
 app.use('/api/quotes', quotesRoutes);
 
+
+app.get('/api/recommend/:slug', async (req, res) => {
+  const { slug } = req.params;
+  const k = req.query.k || 5;
+
+  try {
+    const { data } = await axios.get(
+      `${recServiceURL}/recommend/${encodeURIComponent(slug)}?k=${k}`
+    );
+    res.json(data);
+  } catch (error) {
+    console.error('[recommend] error:', error.message);
+    res.status(500).json({ error: 'Recommendation service unavailable' });
+  }
+}); 
+
 // ✅ Default route for testing
 app.get('/', (req, res) => {
   res.send('Afterthoughts Backend API is running');
