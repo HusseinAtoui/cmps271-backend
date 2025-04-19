@@ -215,7 +215,7 @@ router.get('/verify/:token', async (req, res) => {
 });
 
 // User Login Route with JWT Authentication
-router.post('/login', async (req, res) => {
+router.post('/login',  async (req, res) => { 
   const { email, password } = req.body;
 
   if (!email || !password) {
