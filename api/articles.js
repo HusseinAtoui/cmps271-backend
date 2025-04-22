@@ -40,7 +40,7 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
 };
 
 // Pre-load USE model once
-let useModelPromise = use.load();
+
 
 // Cosine similarity helper
 function cosine(a, b) {

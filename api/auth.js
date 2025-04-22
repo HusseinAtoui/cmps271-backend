@@ -46,7 +46,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID1, // From your .env file
   clientSecret: process.env.GOOGLE_CLIENT_SECRET1, // From your .env file
-  callbackURL: "https://afterthoughts.onrender.com/api/auth/google/callback"
+  callbackURL: "http://localhost:3000/api/auth/google/callback"
 },
 
 async (accessToken, refreshToken, profile, done) => {
@@ -99,31 +99,43 @@ passport.authenticate('google', { scope: ['profile', 'email'] })
 );
 
 // Google OAuth callback URL
-router.get('/google/callback',
-passport.authenticate('google', { failureRedirect: '/login' }),
-(req, res) => {
-  // Generate a JWT token for the authenticated user
-  const token = jwt.sign(
-    { id: req.user._id, email: req.user.email, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '3h' }
-  );
-  const userData = {
-    id: user._id.toString(),
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    profilePicture: user.profilePicture,
-    bio: user.bio
-  };
-  
-  // Convert to URL-safe string
-  const userDataString = encodeURIComponent(JSON.stringify(userData));
-  
-  // Redirect to your frontend with the token in query parameters or handle it as needed
-  res.redirect(`https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}&user=${userDataString}`);
-}
+// Google OAuth callback URL
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  async (req, res) => {
+    try {
+      // Generate a JWT token for the authenticated user
+      const token = jwt.sign(
+        { id: req.user._id, email: req.user.email, role: req.user.role },
+        JWT_SECRET,
+        { expiresIn: '3h' }
+      );
+
+      const userData = {
+        id: req.user._id.toString(),
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        email: req.user.email,
+        profilePicture: req.user.profilePicture,
+        bio: req.user.bio
+      };
+      console.log("✅ Google OAuth userData:", userData);
+
+      // Convert to URL‑safe string
+      const userDataString = encodeURIComponent(JSON.stringify(userData));
+
+      // Redirect to frontend
+      return res.redirect(
+        `https://husseinatoui.github.io/cmps271-frontend/profilepage?token=${token}&user=${userDataString}`
+      );
+    } catch (err) {
+      console.error("❌ Error in Google OAuth callback:", err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
 );
+
 // end of google login stuff
 router.post('/signup', upload.single('profilePicture'), async (req, res) => {
   const { firstName, lastName, email, password, bio } = req.body;
