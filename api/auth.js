@@ -228,7 +228,23 @@ router.get('/verify/:token', async (req, res) => {
 
 // User Login Route with JWT Authentication
 router.post('/login',  async (req, res) => { 
-  const { email, password } = req.body;
+
+  const { email, password, 'g-recaptcha-response': captchaToken } = req.body;
+
+  if (!captchaToken) {
+    return res.status(400).json({ status: "FAILED", message: "Captcha is required." });
+  }
+
+  // Verify captcha
+  try {
+    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
+    const captchaRes = await axios.post(verifyUrl);
+    if (!captchaRes.data.success) {
+      return res.status(400).json({ status: "FAILED", message: "Captcha verification failed." });
+    }
+  } catch (e) {
+    return res.status(500).json({ status: "FAILED", message: "Captcha verification error." });
+  }
 
   if (!email || !password) {
       return res.status(400).json({ status: "FAILED", message: "Email and password are required." });
