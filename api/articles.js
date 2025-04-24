@@ -125,8 +125,7 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
       userID: req.user.id,
       minToRead: req.body.minToRead || 1,
       tag: req.body.tag || "general",
-      pending: false,
-      vector: await getTextEmbedding(req.body.text || "")
+      pending: false
 
     });
 
@@ -464,17 +463,7 @@ router.get('/admin/vectorize', async (req, res) => {
 });
 
 // Get recommendations for article by ID
-router.get('/:id/recommendations', async (req, res) => {
-  try {
-    const recommendations = await getRecommendations(req.params.id);
-    res.json({
-      message: "If you liked this article, you'll love these too:",
-      recommendations
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Could not fetch recommendations." });
-  }
-});
+
 
 // Remove an article from the authenticated user’s saved list
 router.post("/remove-saved-article", verifyToken, async (req, res) => {
