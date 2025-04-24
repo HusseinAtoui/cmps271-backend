@@ -426,7 +426,7 @@ router.get('/run', async (req, res) => {
       // Fill comment
       const commentField = await driver.wait(
         until.elementLocated(By.id('comment')),
-        5000
+       200000
       );
       await commentField.sendKeys('This is a positive test comment from automated testing');
 

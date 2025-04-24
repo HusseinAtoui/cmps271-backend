@@ -15,9 +15,9 @@ const articleSchema = new mongoose.Schema({
     postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     created: { type: Date, default: Date.now },
   }],
-  kudos: [{ type: mongoose.Schema.ObjectId, ref: "User" }],
-  vector:    { type: [Number], default: [] }  // <— embedding vector
-
+  kudos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] ,
+  vector: { type: [Number], default: [] },  // TF-IDF vector for recommendation
+  recommendedArticles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Article' }] // Optional cache
 });
 
 module.exports = mongoose.model('Article', articleSchema);
