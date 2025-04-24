@@ -46,7 +46,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID1, // From your .env file
   clientSecret: process.env.GOOGLE_CLIENT_SECRET1, // From your .env file
-  callbackURL: "http://localhost:3000/api/auth/google/callback"
+  callbackURL: "https://afterthoughts.onrender.com/api/auth/google/callback"
 },
 
 async (accessToken, refreshToken, profile, done) => {
