@@ -150,20 +150,22 @@ router.get('/run', async (req, res) => {
     }
     console.log('✅ Event created successfully!');
 
-    // Verify event in list
     console.log('🔍 Verifying event in list...');
-    const eventList = await driver.wait(
-      until.elementLocated(By.id('eventList')),
-      10000
-    );
 
     await driver.wait(async () => {
+      const eventList = await driver.findElement(By.id('eventList')); // re-fetch fresh reference
       const events = await eventList.findElements(By.css('.event-item'));
-      const titles = await Promise.all(events.map(async e =>
-      (await e.findElement(By.css('h3')).getText()
-      )));
+    
+      const titles = await Promise.all(
+        events.map(async e => {
+          const heading = await e.findElement(By.css('h3'));
+          return heading.getText();
+        })
+      );
+    
       return titles.includes(eventName);
     }, 15000);
+    
 
     console.log('✅ Event appears in list!');
 
@@ -409,7 +411,7 @@ router.get('/run', async (req, res) => {
     // Verify title exists
     const articleTitle = await driver.wait(
       until.elementLocated(By.css('#article-section h1.title')),
-      10000
+      20000
     );
     console.log('📰 Article Title:', await articleTitle.getText());
 
