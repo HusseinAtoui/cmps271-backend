@@ -452,17 +452,6 @@ router.get('/:id/like-status', verifyToken, async (req, res) => {
   }
 });
 
-// Trigger vectorization manually (admin-only or protected route)
-router.get('/admin/vectorize', async (req, res) => {
-  try {
-    await vectorizeArticles();
-    res.send("✅ Articles vectorized.");
-  } catch (err) {
-    res.status(500).send("❌ Vectorization failed.");
-  }
-});
-
-// Get recommendations for article by ID
 
 
 // Remove an article from the authenticated user’s saved list
