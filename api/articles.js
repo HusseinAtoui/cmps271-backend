@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -9,7 +8,8 @@ const Article = require('../models/Article');
 const { verifyToken } = require('../middleware/authenticateUser');
 require('dotenv').config();
 const ImageKit = require('imagekit');
-const { getRecommendations, vectorizeArticles } = require('../utils/recommendations');
+const { vectorizeArticles, getRecommendations } = require('../utils/recommendations');
+
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -41,24 +41,6 @@ const uploadToImageKit = async (fileBuffer, fileName) => {
   }
 };
 
-// ================ RECOMMENDATION ROUTES ================
-router.get('/recommendations/:id', async (req, res) => {
-  try {
-    const recommendations = await getRecommendations(req.params.id);
-    res.json(recommendations);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.post('/vectorize-articles', verifyToken, authorizeRoles('admin'), async (req, res) => {
-  try {
-    await vectorizeArticles();
-    res.json({ message: 'Article vectorization completed successfully' });
-  } catch (err) {
-    res.status(500).json({ error: 'Vectorization failed', details: err.message });
-  }
-});
 // ✅ Get all approved articles (pending = true)
 router.get('/', async (req, res) => {
   try {
@@ -67,20 +49,12 @@ router.get('/', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});router.get('/:id', async (req, res) => {
+});
+// ✅ Get all non approved articles (pending = false)
+router.get('/pending', verifyToken, async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id)
-      .populate('userID', 'firstName lastName')
-      .populate('comments.postedBy', 'firstName lastName profilePicture');
-
-    if (!article) return res.status(404).json({ error: 'Article not found' });
-
-    // Add recommendations to response
-    const recommendations = await getRecommendations(req.params.id);
-    const articleWithRecs = article.toObject();
-    articleWithRecs.recommendations = recommendations.slice(0, 5);
-
-    res.json(articleWithRecs);
+    const articles = await Article.find({ pending: false });
+    res.json(articles);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -141,7 +115,6 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
     }
   }
 
-
   try {
     const newArticle = new Article({
       title: req.body.title || "Untitled Article",
@@ -152,30 +125,17 @@ router.post('/add', verifyToken, uploadFields, async (req, res) => {
       userID: req.user.id,
       minToRead: req.body.minToRead || 1,
       tag: req.body.tag || "general",
-      pending: false
+      pending: false,
+      vector: await getTextEmbedding(req.body.text || "")
+
     });
-    const savedArticle = await newArticle.save();
-    // ✅ Add 4–5 random recommended articles
-    const otherArticles = await Article.find({ _id: { $ne: savedArticle._id } }).select('_id');
-    if (otherArticles.length >= 4) {
-      const shuffled = otherArticles.sort(() => 0.5 - Math.random());
-      const randomRecommendations = shuffled
-        .slice(0, Math.floor(Math.random() * 2) + 4)
-        .map(article => article._id);
 
-      savedArticle.recommendedArticles = randomRecommendations;
-      await savedArticle.save();
-    }
-
-    console.log("✅ Article created with recommendations:", savedArticle);
-    res.status(201).json(savedArticle);
+    const saved = await newArticle.save();
+    res.status(201).json(saved);
   } catch (err) {
-    console.error("❌ Error saving article:", err);
     res.status(500).json({ error: err.message });
   }
-  
 });
-
 
 // ✅ Get article by ID
 
@@ -340,87 +300,40 @@ router.delete('/delete-comment', verifyToken, verifyToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Error deleting comment", error: err.message });
   }
-});
-
-// ✅ Add Kudos for the article but this one does nothing lowkey could remove it
-router.post('/give-kudos', verifyToken, async (req, res) => {
-  const { articleId } = req.body;
-
-  if (!articleId) {
-    return res.status(400).json({ message: "Article ID is required" });
-  }
-
-  try {
-
-    const article = await Article.findById(articleId);
-    if (!article) {
-      return res.status(404).json({ message: "Article not found" });
-    }
-
-    if (!article.kudos.includes(req.user.id)) {
-      article.kudos.push(req.user.id);
-    } else {
-      return res.status(400).json({ message: "You have already given kudos to this article" });
-    }
-
-    await article.save();
-
-    await User.findByIdAndUpdate(req.user.id, { $inc: { activity: 1 } });
-
-    res.status(200).json({
-      message: "Kudos given successfully",
-      kudosCount: article.kudos.length
-    });
-
-  } catch (err) {
-    res.status(500).json({ message: "Error giving kudos", error: err.message });
-  }
-
-});
-// Add Like
+});// Add Like (Kudos)
 router.post('/add-like', verifyToken, async (req, res) => {
   try {
-    // Add the user's ID to the kudos array if not already present
-    const updatedArticle = await Article.findByIdAndUpdate(
+    const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $addToSet: { kudos: req.user.userId }, // prevent duplicates
+        $addToSet: { kudos: req.user.id },  // Ensure we only add the user once
       },
       { new: true }
     );
 
-    // Confirm the user has liked it (should now be true)
-    const hasLiked = updatedArticle.kudos.some(userId =>
-      userId.toString() === req.user.userId
-    );
-
-    res.json({
-      success: true,
-      hasLiked,
-      kudosCount: updatedArticle.kudos.length,
-    });
-
+    // Save the updated like count in localStorage (on the client side)
+    res.json({ success: true, likesCount: article.kudos.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Remove Like
+// Remove Like (Kudos)
 router.post('/remove-like', verifyToken, async (req, res) => {
   try {
     const article = await Article.findByIdAndUpdate(
       req.body.articleId,
       {
-        $pull: { kudos: req.user.userid },  
+        $pull: { kudos: req.user.id },  // Remove the user's like
       },
       { new: true }
     );
-    res.json({ success: true });
+    
+    res.json({ success: true, likesCount: article.kudos.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 router.get('/tag/:tag', async (req, res) => {
   try {
@@ -433,12 +346,12 @@ router.get('/tag/:tag', async (req, res) => {
 });
 
 // Like Status
-router.get('/1/2/3/4/:id/like-status', verifyToken, async (req, res) => {
+router.get('/:id/like-status', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id).select('kudos');
 
     res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))  
+      hasLiked: article.kudos.some(userId => userId.equals(req.user.id))
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -451,7 +364,7 @@ router.get('/:id', async (req, res) => {
 // Save an article for the authenticated user
 router.post("/save-article", verifyToken, async (req, res) => {
   const { articleId } = req.body;
-  const userId = req.user.userid;
+  const userId = req.user.userId;
 
   if (!articleId) {
     return res.status(400).json({ message: "Article ID is required." });
@@ -474,26 +387,99 @@ router.post("/save-article", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Server error while saving article." });
   }
 });
+// Add Like (Kudos)
+router.post('/articles/:id/like', verifyToken, async (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const userId = req.user.id; // Get the user ID from the JWT token
 
+    // Find the article by ID
+    const article = await Article.findById(articleId);
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
 
-// Like Status
+    // Prevent adding a like if the user has already liked the article
+    if (article.kudos.includes(userId)) {
+      return res.status(400).json({ error: 'You have already liked this article' });
+    }
+
+    // Add the user's ID to the kudos array
+    article.kudos.push(userId);
+    await article.save();
+
+    res.json({ message: 'Article liked successfully', likesCount: article.kudos.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add like', message: err.message });
+  }
+});// Remove Like (Kudos)
+router.post('/articles/:id/unlike', verifyToken, async (req, res) => {
+  try {
+    const articleId = req.params.id;
+    const userId = req.user.id;
+
+    // Find the article by ID
+    const article = await Article.findById(articleId);
+    if (!article) {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    // Check if the user has liked the article
+    if (!article.kudos.includes(userId)) {
+      return res.status(400).json({ error: 'You have not liked this article' });
+    }
+
+    // Remove the user's ID from the kudos array
+    article.kudos = article.kudos.filter(id => id.toString() !== userId.toString());
+    await article.save();
+
+    res.json({ message: 'Article unliked successfully', likesCount: article.kudos.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to remove like', message: err.message });
+  }
+});
+
+// Check Like Status
 router.get('/:id/like-status', verifyToken, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id).select('kudos');
 
-    res.json({
-      hasLiked: article.kudos.some(userId => userId.equals(req.user.userId))  
-    });
+    // Check if the user has already liked the article
+    const hasLiked = article.kudos.some(userId => userId.equals(req.user.id));
+
+    res.json({ hasLiked });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// Trigger vectorization manually (admin-only or protected route)
+router.get('/admin/vectorize', async (req, res) => {
+  try {
+    await vectorizeArticles();
+    res.send("✅ Articles vectorized.");
+  } catch (err) {
+    res.status(500).send("❌ Vectorization failed.");
+  }
+});
+
+// Get recommendations for article by ID
+router.get('/:id/recommendations', async (req, res) => {
+  try {
+    const recommendations = await getRecommendations(req.params.id);
+    res.json({
+      message: "If you liked this article, you'll love these too:",
+      recommendations
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Could not fetch recommendations." });
+  }
+});
 
 // Remove an article from the authenticated user’s saved list
 router.post("/remove-saved-article", verifyToken, async (req, res) => {
   const { articleId } = req.body;
-  const userId = req.user.userid;
+  const userId = req.user.userId;
 
   if (!articleId) {
     return res.status(400).json({ message: "Article ID is required." });
@@ -533,4 +519,5 @@ router.post("/remove-saved-article", verifyToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 module.exports = router;

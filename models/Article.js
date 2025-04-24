@@ -16,12 +16,8 @@ const articleSchema = new mongoose.Schema({
     created: { type: Date, default: Date.now },
   }],
   kudos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] ,
-  vector: { 
-    type: [Number],
-    index: true,  // Enables vector search optimization
-    select: false, // Excludes from query results by default
-    default: undefined // Better for sparse arrays
-  }
+  vector: { type: [Number], default: [] },  // TF-IDF vector for recommendation
+  recommendedArticles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Article' }] // Optional cache
 });
 
 module.exports = mongoose.model('Article', articleSchema);
