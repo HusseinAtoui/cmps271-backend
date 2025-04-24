@@ -16,12 +16,7 @@ const articleSchema = new mongoose.Schema({
     created: { type: Date, default: Date.now },
   }],
   kudos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] ,
-  vector: {
-    type: [Number],
-    index: true,
-    select: false,
-    default: undefined
-  },
+  vector: { type: [Number], default: [] },  // TF-IDF vector for recommendation
   recommendedArticles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Article' }]
 });
 
